@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ThemeProvider } from '@/lib/theme';
@@ -15,7 +15,7 @@ function App() {
   return (
     <ThemeProvider>
       <TooltipProvider>
-        <BrowserRouter>
+        <HashRouter>
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/admin" element={<AdminLayout />}>
@@ -28,7 +28,7 @@ function App() {
             </Route>
             <Route path="/kasir" element={<CashierPage />} />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
         <Toaster richColors position="top-right" />
       </TooltipProvider>
     </ThemeProvider>
