@@ -1,10 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
   <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1"/>
-      <stop offset="100%" style="stop-color:#a78bfa"/>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#06b6d4" />
     </linearGradient>
   </defs>
-  <rect width="100" height="100" rx="20" fill="url(#g)"/>
-  <text x="50" y="65" font-size="50" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-weight="bold">K</text>
+
+  <rect width="128" height="128" rx="32" fill="url(#bgGrad)" />
+  <rect x="6" y="6" width="116" height="116" rx="26" fill="none" stroke="url(#brandGrad)" stroke-width="2" opacity="0.4" />
+
+  <!-- Cash register minimal symbol -->
+  <g transform="translate(18, 20)">
+    <rect x="18" y="6" width="56" height="38" rx="8" fill="#0f172a" stroke="url(#brandGrad)" stroke-width="4" />
+    <path d="M 28 14 H 64 M 28 22 H 54 M 28 30 H 60" stroke="#22c55e" stroke-width="3" stroke-linecap="round" />
+    
+    <!-- Base -->
+    <path d="M 2 52 C 2 48 6 44 10 44 L 82 44 C 86 44 90 48 90 52 C 90 56 86 60 82 60 L 10 60 C 6 60 2 56 2 52 Z" fill="url(#brandGrad)" />
+    <!-- Receipt -->
+    <path d="M 12 44 V 74 L 16 71 L 20 74 L 24 71 L 28 74 V 44" fill="#ffffff" />
+  </g>
 </svg>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, ShoppingCart, Package, AlertTriangle, Download, Upload, Lock } from 'lucide-react';
+import { ShieldCheck, ShoppingCart, AlertTriangle, Download, Upload, Lock } from 'lucide-react';
 import { getLowStockProducts, getStoreProfile, type StoreProfile } from '@/lib/db';
 import { exportAllData, importAllData } from '@/lib/export-import';
 import { toast } from 'sonner';
@@ -158,9 +158,7 @@ export default function LandingPage() {
         {profile?.logo ? (
           <img src={profile.logo} alt="Logo" className="w-24 h-24 mx-auto mb-4 rounded-2xl shadow-2xl shadow-indigo-500/30 object-contain bg-white/10 p-2" />
         ) : (
-          <div className="w-24 h-24 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-indigo-500/30">
-            <Package className="w-12 h-12 text-white" />
-          </div>
+          <img src="/logo.svg" alt="Logo" className="w-24 h-24 mx-auto mb-4 rounded-2xl shadow-2xl shadow-indigo-500/30 object-contain bg-slate-900/50 border border-white/10 p-2" />
         )}
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
           {profile?.storeName || 'Kasir Gue'}
