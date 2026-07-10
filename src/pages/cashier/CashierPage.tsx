@@ -60,7 +60,7 @@ export default function CashierPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [cartHeight, setCartHeight] = useState(50); // in vh on mobile (default 50)
   const [isDragging, setIsDragging] = useState(false);
-  const dragHandleRef = useRef<HTMLDivElement>(null);
+  const [dragHandleNode, setDragHandleNode] = useState<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(0);
@@ -82,8 +82,7 @@ export default function CashierPage() {
 
   // Programmatic touch events to bypass passive listener limits and call preventDefault()
   useEffect(() => {
-    const handle = dragHandleRef.current;
-    if (!handle || !isMobile) return;
+    if (!dragHandleNode || !isMobile) return;
 
     const onTouchStart = (e: TouchEvent) => {
       isDraggingRef.current = true;
@@ -121,16 +120,17 @@ export default function CashierPage() {
       });
     };
 
-    handle.addEventListener('touchstart', onTouchStart, { passive: true });
-    handle.addEventListener('touchmove', onTouchMove, { passive: false });
-    handle.addEventListener('touchend', onTouchEnd, { passive: true });
+    // iOS Safari fixes: touchstart MUST not be passive to enable e.preventDefault() in touchmove
+    dragHandleNode.addEventListener('touchstart', onTouchStart, { passive: false });
+    dragHandleNode.addEventListener('touchmove', onTouchMove, { passive: false });
+    dragHandleNode.addEventListener('touchend', onTouchEnd, { passive: false });
 
     return () => {
-      handle.removeEventListener('touchstart', onTouchStart);
-      handle.removeEventListener('touchmove', onTouchMove);
-      handle.removeEventListener('touchend', onTouchEnd);
+      dragHandleNode.removeEventListener('touchstart', onTouchStart);
+      dragHandleNode.removeEventListener('touchmove', onTouchMove);
+      dragHandleNode.removeEventListener('touchend', onTouchEnd);
     };
-  }, [isMobile]);
+  }, [dragHandleNode, isMobile]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!isMobile) return;
@@ -701,7 +701,7 @@ export default function CashierPage() {
         {/* Mobile Drag Handle */}
         {isMobile && (
           <div 
-            ref={dragHandleRef}
+            ref={setDragHandleNode}
             className="w-full py-2.5 flex items-center justify-center cursor-ns-resize hover:bg-white/5 active:bg-white/10 transition-colors select-none z-20"
             style={{ touchAction: 'none' }}
             onMouseDown={handleMouseDown}
