@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
@@ -55,6 +55,90 @@ export default function CashierPage() {
   const [pendingCarts, setPendingCarts] = useState<PendingCart[]>([]);
   const [todayTransactions, setTodayTransactions] = useState<Transaction[]>([]);
   const [storeProfile, setStoreProfile] = useState<StoreProfile | null>(null);
+
+  // Mobile Dragging states
+  const [isMobile, setIsMobile] = useState(false);
+  const [cartHeight, setCartHeight] = useState(50); // in vh on mobile (default 50)
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = useRef(0);
+  const dragStartHeight = useRef(0);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setIsDragging(true);
+    dragStartY.current = e.touches[0].clientY;
+    dragStartHeight.current = cartHeight;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !isMobile) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = dragStartY.current - currentY;
+    const deltaVh = (deltaY / window.innerHeight) * 100;
+    let newHeight = dragStartHeight.current + deltaVh;
+    if (newHeight < 18) newHeight = 18;
+    if (newHeight > 90) newHeight = 90;
+    setCartHeight(newHeight);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    const presets = [18, 50, 85];
+    const nearest = presets.reduce((prev, curr) =>
+      Math.abs(curr - cartHeight) < Math.abs(prev - cartHeight) ? curr : prev
+    );
+    setCartHeight(nearest);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isMobile) return;
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    dragStartY.current = e.clientY;
+    dragStartHeight.current = cartHeight;
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !isMobile) return;
+      const deltaY = dragStartY.current - e.clientY;
+      const deltaVh = (deltaY / window.innerHeight) * 100;
+      let newHeight = dragStartHeight.current + deltaVh;
+      if (newHeight < 18) newHeight = 18;
+      if (newHeight > 90) newHeight = 90;
+      setCartHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        const presets = [18, 50, 85];
+        const nearest = presets.reduce((prev, curr) =>
+          Math.abs(curr - cartHeight) < Math.abs(prev - cartHeight) ? curr : prev
+        );
+        setCartHeight(nearest);
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, isMobile, cartHeight]);
 
   // ── Calculated Values ──────────────────────────────────────────────────────
   const subtotal = useMemo(
@@ -406,7 +490,12 @@ export default function CashierPage() {
       {/* ══════════════════════════════════════════════════════════════════════
           LEFT PANEL — Product Catalog
           ══════════════════════════════════════════════════════════════════════ */}
-      <div className="flex-[3] flex flex-col min-w-0 bg-slate-950 h-[50vh] lg:h-full">
+      <div 
+        className={`flex-[3] flex flex-col min-w-0 bg-slate-950 lg:h-full ${
+          isDragging ? 'transition-none' : 'transition-[height] duration-200 ease-out'
+        }`}
+        style={{ height: isMobile ? `${100 - cartHeight}vh` : undefined }}
+      >
         {/* ── Top Bar ─────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-slate-950/80 backdrop-blur-sm">
           <Link
@@ -571,7 +660,24 @@ export default function CashierPage() {
       {/* ══════════════════════════════════════════════════════════════════════
           RIGHT PANEL — Shopping Cart
           ══════════════════════════════════════════════════════════════════════ */}
-      <div className="flex-[2] flex flex-col min-w-0 bg-slate-900 border-t lg:border-t-0 lg:border-l border-white/10 h-[50vh] lg:h-full">
+      <div 
+        className={`flex-[2] flex flex-col min-w-0 bg-slate-900 border-t lg:border-t-0 lg:border-l border-white/10 lg:h-full relative ${
+          isDragging ? 'transition-none' : 'transition-[height] duration-200 ease-out'
+        }`}
+        style={{ height: isMobile ? `${cartHeight}vh` : undefined }}
+      >
+        {/* Mobile Drag Handle */}
+        {isMobile && (
+          <div 
+            className="w-full py-2.5 flex items-center justify-center cursor-ns-resize hover:bg-white/5 active:bg-white/10 transition-colors select-none z-20"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+          >
+            <div className="w-14 h-1.5 bg-white/20 rounded-full hover:bg-white/40 transition-colors" />
+          </div>
+        )}
         {/* ── Cart Header ─────────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
           <ShoppingCart className="w-5 h-5 text-slate-300" />
@@ -589,7 +695,7 @@ export default function CashierPage() {
         </div>
 
         {/* ── Cart Items ──────────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto px-4 py-3">
+        <div className={`flex-1 overflow-y-auto px-4 py-3 ${isMobile && cartHeight <= 25 ? 'hidden' : ''}`}>
           {cart.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-slate-500">
               <div className="w-24 h-24 rounded-full bg-slate-800/50 flex items-center justify-center mb-4">
@@ -661,7 +767,7 @@ export default function CashierPage() {
         </div>
 
         {/* ── Discount Section ────────────────────────────────────────────── */}
-        {cart.length > 0 && (
+        {cart.length > 0 && !(isMobile && cartHeight <= 25) && (
           <div className="px-4 py-3 border-t border-white/5">
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg overflow-hidden border border-white/10">
@@ -712,31 +818,45 @@ export default function CashierPage() {
         {/* ── Summary Section ─────────────────────────────────────────────── */}
         {cart.length > 0 && (
           <div className="px-4 py-3 border-t border-white/10 bg-slate-900/80">
-            <div className="space-y-1.5 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Subtotal</span>
-                <span className="text-white">{formatRupiah(subtotal)}</span>
-              </div>
-              {discountAmount > 0 && (
+            {!(isMobile && cartHeight <= 25) ? (
+              <div className="space-y-1.5 mb-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Diskon</span>
-                  <span className="text-red-400">
-                    -{formatRupiah(discountAmount)}
+                  <span className="text-slate-400">Subtotal</span>
+                  <span className="text-white">{formatRupiah(subtotal)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Diskon</span>
+                    <span className="text-red-400">
+                      -{formatRupiah(discountAmount)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-baseline pt-2 border-t border-white/5">
+                  <span className="text-base font-medium text-slate-300">
+                    Total
+                  </span>
+                  <span
+                    className="text-2xl font-bold"
+                    style={{ color: 'var(--primary-hex, #6366f1)' }}
+                  >
+                    {formatRupiah(total)}
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between items-baseline pt-2 border-t border-white/5">
-                <span className="text-base font-medium text-slate-300">
-                  Total
+              </div>
+            ) : (
+              <div className="flex justify-between items-center mb-2.5 px-1 select-none">
+                <span className="text-xs text-slate-400">
+                  Total ({cart.reduce((sum, i) => sum + i.quantity, 0)} item)
                 </span>
                 <span
-                  className="text-2xl font-bold"
+                  className="text-base font-bold"
                   style={{ color: 'var(--primary-hex, #6366f1)' }}
                 >
                   {formatRupiah(total)}
                 </span>
               </div>
-            </div>
+            )}
 
             {/* ── Action Buttons ─────────────────────────────────────────── */}
             <div className="grid grid-cols-3 gap-2">
