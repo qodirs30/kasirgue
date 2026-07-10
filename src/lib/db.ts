@@ -45,6 +45,7 @@ export interface Transaction {
   change?: number;
   status: 'completed' | 'voided';
   timestamp: Date;
+  customerName?: string;
 }
 
 export interface CartItem extends Product {

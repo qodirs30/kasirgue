@@ -40,13 +40,14 @@ export default function CashierPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua');
   const [categories, setCategories] = useState<string[]>([]);
-  const [discount, setDiscount] = useState<{ type: 'fixed' | 'percentage'; value: number }>({
+  const [discount, setDiscount] = useState<{ type: 'fixed' | 'percentage'; value: number | '' }>({
     type: 'fixed',
-    value: 0,
+    value: '',
   });
   const [showPayment, setShowPayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris'>('cash');
-  const [cashReceived, setCashReceived] = useState(0);
+  const [cashReceived, setCashReceived] = useState<number | ''>('');
+  const [customerName, setCustomerName] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState<Transaction | null>(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -61,11 +62,11 @@ export default function CashierPage() {
     [cart]
   );
   const discountAmount = useMemo(
-    () => (discount.type === 'percentage' ? (subtotal * discount.value) / 100 : discount.value),
+    () => (discount.type === 'percentage' ? (subtotal * Number(discount.value || 0)) / 100 : Number(discount.value || 0)),
     [discount, subtotal]
   );
   const total = useMemo(() => Math.max(0, subtotal - discountAmount), [subtotal, discountAmount]);
-  const changeAmount = useMemo(() => cashReceived - total, [cashReceived, total]);
+  const changeAmount = useMemo(() => Number(cashReceived || 0) - total, [cashReceived, total]);
 
   // ── Data Loaders ───────────────────────────────────────────────────────────
   const loadProducts = async () => {
@@ -165,7 +166,8 @@ export default function CashierPage() {
       toast.error('Keranjang kosong!');
       return;
     }
-    setCashReceived(0);
+    setCashReceived('');
+    setCustomerName('');
     setPaymentMethod('cash');
     setShowPayment(true);
   };
@@ -182,13 +184,14 @@ export default function CashierPage() {
       subtotal,
       discount: discountAmount,
       discountType: discount.type,
-      discountValue: discount.value,
+      discountValue: Number(discount.value || 0),
       total,
       paymentMethod: method,
-      cashReceived: method === 'cash' ? cashReceived : undefined,
+      cashReceived: method === 'cash' ? Number(cashReceived || 0) : undefined,
       change: method === 'cash' ? changeAmount : undefined,
       status: 'completed',
       timestamp: new Date(),
+      customerName: customerName.trim() || undefined,
     };
 
     const id = await db.transactions.add(transaction);
@@ -276,10 +279,11 @@ export default function CashierPage() {
   // ── Reset for new transaction ──────────────────────────────────────────────
   const resetTransaction = () => {
     setCart([]);
-    setDiscount({ type: 'fixed', value: 0 });
+    setDiscount({ type: 'fixed', value: '' });
     setShowReceipt(false);
     setCurrentTransaction(null);
-    setCashReceived(0);
+    setCashReceived('');
+    setCustomerName('');
   };
 
   // ── Print Handler ──────────────────────────────────────────────────────────
@@ -331,6 +335,11 @@ export default function CashierPage() {
 
       y += 5;
       doc.text(formatDateTime(new Date(currentTransaction.timestamp)), 40, y, { align: 'center' });
+
+      if (currentTransaction.customerName) {
+        y += 4;
+        doc.text(`Pelanggan: ${currentTransaction.customerName}`, 40, y, { align: 'center', maxWidth: 60 });
+      }
 
       y += 5;
       doc.text('----------------------------------------', 40, y, { align: 'center' });
@@ -393,11 +402,11 @@ export default function CashierPage() {
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="h-screen flex flex-row bg-slate-950 text-white overflow-hidden">
+    <div className="h-screen flex flex-col lg:flex-row bg-slate-950 text-white overflow-hidden">
       {/* ══════════════════════════════════════════════════════════════════════
           LEFT PANEL — Product Catalog
           ══════════════════════════════════════════════════════════════════════ */}
-      <div className="flex-[3] flex flex-col min-w-0 bg-slate-950">
+      <div className="flex-[3] flex flex-col min-w-0 bg-slate-950 h-[50vh] lg:h-full">
         {/* ── Top Bar ─────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-slate-950/80 backdrop-blur-sm">
           <Link
@@ -562,7 +571,7 @@ export default function CashierPage() {
       {/* ══════════════════════════════════════════════════════════════════════
           RIGHT PANEL — Shopping Cart
           ══════════════════════════════════════════════════════════════════════ */}
-      <div className="flex-[2] flex flex-col min-w-0 bg-slate-900 border-l border-white/10">
+      <div className="flex-[2] flex flex-col min-w-0 bg-slate-900 border-t lg:border-t-0 lg:border-l border-white/10 h-[50vh] lg:h-full">
         {/* ── Cart Header ─────────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10">
           <ShoppingCart className="w-5 h-5 text-slate-300" />
@@ -686,13 +695,14 @@ export default function CashierPage() {
                 min={0}
                 max={discount.type === 'percentage' ? 100 : subtotal}
                 placeholder="Diskon"
-                value={discount.value || ''}
-                onChange={(e) =>
+                value={discount.value}
+                onChange={(e) => {
+                  const val = e.target.value;
                   setDiscount((d) => ({
                     ...d,
-                    value: parseFloat(e.target.value) || 0,
-                  }))
-                }
+                    value: val === '' ? '' : parseFloat(val),
+                  }));
+                }}
                 className="flex-1 px-3 py-1.5 rounded-lg bg-slate-800/50 border border-white/10 text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-[var(--primary-hex,#6366f1)]/40 transition-all"
               />
             </div>
@@ -864,6 +874,20 @@ export default function CashierPage() {
                 </p>
               </div>
 
+              {/* Nama Pelanggan Input */}
+              <div className="mb-5">
+                <label className="text-xs text-slate-400 mb-1.5 block font-medium">
+                  Nama Pelanggan (Opsional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Masukkan nama pelanggan..."
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-800/50 border border-white/10 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-[var(--primary-hex,#6366f1)]/40 text-sm transition-all"
+                />
+              </div>
+
               {paymentMethod === 'cash' ? (
                 <>
                   {/* Quick Amount Buttons */}
@@ -909,17 +933,18 @@ export default function CashierPage() {
                     </label>
                     <input
                       type="number"
-                      value={cashReceived || ''}
-                      onChange={(e) =>
-                        setCashReceived(parseFloat(e.target.value) || 0)
-                      }
+                      value={cashReceived}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCashReceived(val === '' ? '' : parseFloat(val));
+                      }}
                       placeholder="Masukkan nominal..."
                       className="w-full px-4 py-3 rounded-xl bg-slate-800/50 border border-white/10 text-white text-lg font-bold placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-[var(--primary-hex,#6366f1)]/40 transition-all"
                     />
                   </div>
 
                   {/* Change Display */}
-                  {cashReceived > 0 && (
+                  {Number(cashReceived) > 0 && (
                     <div
                       className={`text-center py-3 rounded-xl mb-4 border ${
                         changeAmount >= 0
@@ -944,8 +969,8 @@ export default function CashierPage() {
                   {/* Process Button */}
                   <LiquidButton
                     onClick={() => processPayment('cash')}
-                    disabled={cashReceived < total}
-                    variant={cashReceived >= total ? "success" : "default"}
+                    disabled={Number(cashReceived) < total}
+                    variant={Number(cashReceived) >= total ? "success" : "default"}
                     size="lg"
                     className="w-full py-3.5 text-white font-bold text-base cursor-pointer"
                   >
@@ -1054,6 +1079,13 @@ export default function CashierPage() {
                 <p className="text-xs text-slate-500 text-center mb-3">
                   {formatDateTime(new Date(currentTransaction.timestamp))}
                 </p>
+
+                {/* Customer Name */}
+                {currentTransaction.customerName && (
+                  <p className="text-xs text-white font-medium text-center -mt-2 mb-3">
+                    Pelanggan: {currentTransaction.customerName}
+                  </p>
+                )}
 
                 {/* Items */}
                 <div className="space-y-2 mb-3">
@@ -1196,6 +1228,13 @@ export default function CashierPage() {
             {formatDateTime(new Date(currentTransaction.timestamp))}
           </p>
 
+          {/* Customer Name */}
+          {currentTransaction.customerName && (
+            <p className="text-xs text-center font-bold">
+              Pelanggan: {currentTransaction.customerName}
+            </p>
+          )}
+
           <p className="border-t border-dashed border-black my-2" />
 
           {/* Items */}
@@ -1300,12 +1339,17 @@ export default function CashierPage() {
                   {todayTransactions.map((tx) => (
                     <div
                       key={tx.id}
-                      className={`bg-slate-800/50 rounded-lg p-4 border border-white/5 transition-all duration-200 ${
+                      onClick={() => {
+                        setCurrentTransaction(tx);
+                        setShowHistory(false);
+                        setShowReceipt(true);
+                      }}
+                      className={`bg-slate-800/50 rounded-lg p-4 border border-white/5 hover:bg-slate-800/80 hover:border-[var(--primary-hex,#6366f1)]/40 transition-all duration-200 cursor-pointer group ${
                         tx.status === 'voided' ? 'opacity-60' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs text-slate-500">
                             {formatTime(new Date(tx.timestamp))}
                           </span>
@@ -1326,6 +1370,11 @@ export default function CashierPage() {
                             {tx.paymentMethod === 'cash' ? 'Tunai' : 'QRIS'}
                           </span>
                         </div>
+                        {tx.customerName && (
+                          <span className="text-xs font-bold text-[var(--primary-hex,#6366f1)] bg-[var(--primary-hex,#6366f1)]/10 px-2 py-0.5 rounded-md truncate max-w-[150px]">
+                            {tx.customerName}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center justify-between">
                         <div>
@@ -1333,7 +1382,7 @@ export default function CashierPage() {
                             className={`text-base font-bold ${
                               tx.status === 'voided'
                                 ? 'line-through text-slate-500'
-                                : ''
+                                : 'group-hover:text-white'
                             }`}
                             style={
                               tx.status !== 'voided'
@@ -1348,15 +1397,23 @@ export default function CashierPage() {
                             {tx.items.reduce((s, i) => s + i.quantity, 0)} item
                           </p>
                         </div>
-                        {tx.status === 'completed' && (
-                          <button
-                            onClick={() => voidTransaction(tx)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all cursor-pointer active:scale-95"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Batalkan
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                            Lihat Stuk →
+                          </span>
+                          {tx.status === 'completed' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                voidTransaction(tx);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-all cursor-pointer active:scale-95"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Batalkan
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

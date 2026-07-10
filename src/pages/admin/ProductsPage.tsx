@@ -507,8 +507,8 @@ export default function ProductsPage() {
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">Stok</label>
                   <input
                     type="number"
-                    value={formData.stock}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, stock: Number(e.target.value) }))}
+                    value={formData.stock === 0 ? '' : formData.stock}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, stock: e.target.value === '' ? 0 : Number(e.target.value) }))}
                     min={0}
                     className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/50 transition-all text-sm"
                   />
@@ -523,8 +523,8 @@ export default function ProductsPage() {
                   </label>
                   <input
                     type="number"
-                    value={formData.buyPrice}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, buyPrice: Number(e.target.value) }))}
+                    value={formData.buyPrice === 0 ? '' : formData.buyPrice}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, buyPrice: e.target.value === '' ? 0 : Number(e.target.value) }))}
                     min={0}
                     className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/50 transition-all text-sm"
                   />
@@ -535,8 +535,8 @@ export default function ProductsPage() {
                   </label>
                   <input
                     type="number"
-                    value={formData.sellPrice}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, sellPrice: Number(e.target.value) }))}
+                    value={formData.sellPrice === 0 ? '' : formData.sellPrice}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, sellPrice: e.target.value === '' ? 0 : Number(e.target.value) }))}
                     min={0}
                     className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/50 transition-all text-sm"
                   />

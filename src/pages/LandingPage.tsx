@@ -285,7 +285,7 @@ export default function LandingPage() {
                 </LiquidButton>
                 
                 <a
-                  href="https://wa.me/6282224000513?text=Halo%20Mas%20Qodir,%20gw%20udah%20traktir%20kopi%20nih!%20Minta%20PIN%20aktivasi%20Web%2520Kasir%2520Lokal%2520dong"
+                  href="https://wa.me/6282224000513?text=Halo%20Mas%20Qodir,%20gw%20udah%20traktir%20kopi%20nih!%20Minta%20PIN%20aktivasi%20Web%20Kasir%20Lokal%20dong"
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => setShowPinInput(true)}
