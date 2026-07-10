@@ -85,13 +85,20 @@ export default function CashierPage() {
     if (!dragHandleNode || !isMobile) return;
 
     const onTouchStart = (e: TouchEvent) => {
-      if (e.cancelable) {
-        e.preventDefault();
-      }
       isDraggingRef.current = true;
       setIsDragging(true);
       dragStartY.current = e.touches[0].clientY;
       dragStartHeight.current = cartHeightRef.current;
+
+      // Synchronously remove transition styles on panels to prevent drag rendering lag
+      const parent = dragHandleNode.parentElement;
+      if (parent) {
+        parent.style.transition = 'none';
+        const leftPanel = parent.previousElementSibling as HTMLElement;
+        if (leftPanel) {
+          leftPanel.style.transition = 'none';
+        }
+      }
     };
 
     const onTouchMove = (e: TouchEvent) => {
@@ -105,7 +112,7 @@ export default function CashierPage() {
       const deltaVh = (deltaY / window.innerHeight) * 100;
       let newHeight = dragStartHeight.current + deltaVh;
       if (newHeight < 18) newHeight = 18;
-      if (newHeight > 90) newHeight = 90;
+      if (newHeight > 95) newHeight = 95; // Allow dragging up to 95vh (mentok atas)
       setCartHeight(newHeight);
     };
 
@@ -114,8 +121,18 @@ export default function CashierPage() {
       isDraggingRef.current = false;
       setIsDragging(false);
 
+      // Re-enable transitions for smooth snap snapping back to presets
+      const parent = dragHandleNode.parentElement;
+      if (parent) {
+        parent.style.transition = 'height 200ms ease-out';
+        const leftPanel = parent.previousElementSibling as HTMLElement;
+        if (leftPanel) {
+          leftPanel.style.transition = 'height 200ms ease-out';
+        }
+      }
+
       setCartHeight((h) => {
-        const presets = [18, 50, 85];
+        const presets = [18, 50, 92]; // Snapping presets (collapsed, half, expanded to 92vh)
         const nearest = presets.reduce((prev, curr) =>
           Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
         );
@@ -141,6 +158,18 @@ export default function CashierPage() {
     setIsDragging(true);
     dragStartY.current = e.clientY;
     dragStartHeight.current = cartHeight;
+
+    // Disable transitions during drag
+    if (dragHandleNode) {
+      const parent = dragHandleNode.parentElement;
+      if (parent) {
+        parent.style.transition = 'none';
+        const leftPanel = parent.previousElementSibling as HTMLElement;
+        if (leftPanel) {
+          leftPanel.style.transition = 'none';
+        }
+      }
+    }
   };
 
   useEffect(() => {
@@ -150,18 +179,33 @@ export default function CashierPage() {
       const deltaVh = (deltaY / window.innerHeight) * 100;
       let newHeight = dragStartHeight.current + deltaVh;
       if (newHeight < 18) newHeight = 18;
-      if (newHeight > 90) newHeight = 90;
+      if (newHeight > 95) newHeight = 95;
       setCartHeight(newHeight);
     };
 
     const handleMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
-        const presets = [18, 50, 85];
-        const nearest = presets.reduce((prev, curr) =>
-          Math.abs(curr - cartHeight) < Math.abs(prev - cartHeight) ? curr : prev
-        );
-        setCartHeight(nearest);
+
+        // Re-enable transitions
+        if (dragHandleNode) {
+          const parent = dragHandleNode.parentElement;
+          if (parent) {
+            parent.style.transition = 'height 200ms ease-out';
+            const leftPanel = parent.previousElementSibling as HTMLElement;
+            if (leftPanel) {
+              leftPanel.style.transition = 'height 200ms ease-out';
+            }
+          }
+        }
+
+        setCartHeight((h) => {
+          const presets = [18, 50, 92];
+          const nearest = presets.reduce((prev, curr) =>
+            Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
+          );
+          return nearest;
+        });
       }
     };
 
@@ -173,7 +217,7 @@ export default function CashierPage() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isMobile, cartHeight]);
+  }, [isDragging, isMobile, cartHeight, dragHandleNode]);
 
   // ── Calculated Values ──────────────────────────────────────────────────────
   const subtotal = useMemo(
@@ -526,10 +570,11 @@ export default function CashierPage() {
           LEFT PANEL — Product Catalog
           ══════════════════════════════════════════════════════════════════════ */}
       <div 
-        className={`flex-[3] flex flex-col min-w-0 bg-slate-950 lg:h-full ${
-          isDragging ? 'transition-none' : 'transition-[height] duration-200 ease-out'
-        }`}
-        style={{ height: isMobile ? `${100 - cartHeight}vh` : undefined }}
+        className="flex-[3] flex flex-col min-w-0 bg-slate-950 lg:h-full"
+        style={{ 
+          height: isMobile ? `${100 - cartHeight}vh` : undefined,
+          transition: isDragging ? 'none' : 'height 200ms ease-out'
+        }}
       >
         {/* ── Top Bar ─────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-slate-950/80 backdrop-blur-sm">
@@ -696,10 +741,11 @@ export default function CashierPage() {
           RIGHT PANEL — Shopping Cart
           ══════════════════════════════════════════════════════════════════════ */}
       <div 
-        className={`flex-[2] flex flex-col min-w-0 bg-slate-900 border-t lg:border-t-0 lg:border-l border-white/10 lg:h-full relative ${
-          isDragging ? 'transition-none' : 'transition-[height] duration-200 ease-out'
-        }`}
-        style={{ height: isMobile ? `${cartHeight}vh` : undefined }}
+        className="flex-[2] flex flex-col min-w-0 bg-slate-900 border-t lg:border-t-0 lg:border-l border-white/10 lg:h-full relative"
+        style={{ 
+          height: isMobile ? `${cartHeight}vh` : undefined,
+          transition: isDragging ? 'none' : 'height 200ms ease-out'
+        }}
       >
         {/* Mobile Drag Handle */}
         {isMobile && (
