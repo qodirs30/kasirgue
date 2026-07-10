@@ -60,8 +60,16 @@ export default function CashierPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [cartHeight, setCartHeight] = useState(50); // in vh on mobile (default 50)
   const [isDragging, setIsDragging] = useState(false);
+  const dragHandleRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
   const dragStartY = useRef(0);
   const dragStartHeight = useRef(0);
+  const cartHeightRef = useRef(cartHeight);
+
+  // Keep cartHeightRef in sync with cartHeight state
+  useEffect(() => {
+    cartHeightRef.current = cartHeight;
+  }, [cartHeight]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -72,33 +80,57 @@ export default function CashierPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!isMobile) return;
-    setIsDragging(true);
-    dragStartY.current = e.touches[0].clientY;
-    dragStartHeight.current = cartHeight;
-  };
+  // Programmatic touch events to bypass passive listener limits and call preventDefault()
+  useEffect(() => {
+    const handle = dragHandleRef.current;
+    if (!handle || !isMobile) return;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || !isMobile) return;
-    const currentY = e.touches[0].clientY;
-    const deltaY = dragStartY.current - currentY;
-    const deltaVh = (deltaY / window.innerHeight) * 100;
-    let newHeight = dragStartHeight.current + deltaVh;
-    if (newHeight < 18) newHeight = 18;
-    if (newHeight > 90) newHeight = 90;
-    setCartHeight(newHeight);
-  };
+    const onTouchStart = (e: TouchEvent) => {
+      isDraggingRef.current = true;
+      setIsDragging(true);
+      dragStartY.current = e.touches[0].clientY;
+      dragStartHeight.current = cartHeightRef.current;
+    };
 
-  const handleTouchEnd = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    const presets = [18, 50, 85];
-    const nearest = presets.reduce((prev, curr) =>
-      Math.abs(curr - cartHeight) < Math.abs(prev - cartHeight) ? curr : prev
-    );
-    setCartHeight(nearest);
-  };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDraggingRef.current) return;
+      // Prevent browser native pull-to-refresh, page scrolling, and bouncing
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      const currentY = e.touches[0].clientY;
+      const deltaY = dragStartY.current - currentY;
+      const deltaVh = (deltaY / window.innerHeight) * 100;
+      let newHeight = dragStartHeight.current + deltaVh;
+      if (newHeight < 18) newHeight = 18;
+      if (newHeight > 90) newHeight = 90;
+      setCartHeight(newHeight);
+    };
+
+    const onTouchEnd = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      setIsDragging(false);
+
+      setCartHeight((h) => {
+        const presets = [18, 50, 85];
+        const nearest = presets.reduce((prev, curr) =>
+          Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
+        );
+        return nearest;
+      });
+    };
+
+    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+    handle.addEventListener('touchmove', onTouchMove, { passive: false });
+    handle.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      handle.removeEventListener('touchstart', onTouchStart);
+      handle.removeEventListener('touchmove', onTouchMove);
+      handle.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [isMobile]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!isMobile) return;
@@ -669,10 +701,9 @@ export default function CashierPage() {
         {/* Mobile Drag Handle */}
         {isMobile && (
           <div 
+            ref={dragHandleRef}
             className="w-full py-2.5 flex items-center justify-center cursor-ns-resize hover:bg-white/5 active:bg-white/10 transition-colors select-none z-20"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            style={{ touchAction: 'none' }}
             onMouseDown={handleMouseDown}
           >
             <div className="w-14 h-1.5 bg-white/20 rounded-full hover:bg-white/40 transition-colors" />
