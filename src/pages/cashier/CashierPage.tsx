@@ -85,6 +85,9 @@ export default function CashierPage() {
     if (!dragHandleNode || !isMobile) return;
 
     const onTouchStart = (e: TouchEvent) => {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
       isDraggingRef.current = true;
       setIsDragging(true);
       dragStartY.current = e.touches[0].clientY;
@@ -702,7 +705,7 @@ export default function CashierPage() {
         {isMobile && (
           <div 
             ref={setDragHandleNode}
-            className="w-full py-2.5 flex items-center justify-center cursor-ns-resize hover:bg-white/5 active:bg-white/10 transition-colors select-none z-20"
+            className="w-full py-4 flex items-center justify-center cursor-ns-resize hover:bg-white/5 active:bg-white/10 transition-colors select-none z-20"
             style={{ touchAction: 'none' }}
             onMouseDown={handleMouseDown}
           >
