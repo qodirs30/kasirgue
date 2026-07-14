@@ -1401,7 +1401,7 @@ export default function CashierPage() {
 
       {/* ── Print-Only Receipt (rendered via React Portal directly under body for perfect clean printing) ──────────────── */}
       {showReceipt && currentTransaction && createPortal(
-        <div className="print-receipt hidden print:block bg-white text-black p-6 text-sm font-mono max-w-[80mm] mx-auto">
+        <div className="print-receipt hidden print:block bg-white text-black w-full max-w-[76mm] mx-auto">
           {/* Store Header */}
           <div className="text-center mb-3">
             {storeProfile?.logo && (
