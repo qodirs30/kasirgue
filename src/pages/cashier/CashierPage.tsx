@@ -1401,26 +1401,67 @@ export default function CashierPage() {
 
       {/* ── Print-Only Receipt (rendered via React Portal directly under body for perfect clean printing) ──────────────── */}
       {showReceipt && currentTransaction && createPortal(
-        <div className="print-receipt hidden print:block bg-white text-black w-full max-w-[76mm] mx-auto">
+        <div 
+          className="print-receipt hidden print:block bg-white text-black font-mono mx-auto"
+          style={{
+            width: '100%',
+            maxWidth: storeProfile?.receiptPaperSize === '58mm' 
+              ? '48mm' 
+              : storeProfile?.receiptPaperSize === '80mm' 
+                ? '76mm' 
+                : '76mm',
+            fontSize: storeProfile?.receiptFontSize === 'small' 
+              ? '9px' 
+              : storeProfile?.receiptFontSize === 'large' 
+                ? '13px' 
+                : '11px',
+            lineHeight: '1.4',
+            padding: '2mm'
+          }}
+        >
           {/* Store Header */}
-          <div className="text-center mb-3">
-            {storeProfile?.logo && (
-              <img
-                src={storeProfile.logo}
-                alt=""
-                className="w-12 h-12 mx-auto mb-1 object-contain"
-              />
-            )}
-            <p className="font-bold text-base">
-              {storeProfile?.storeName || 'Kasir Gue'}
-            </p>
-            {storeProfile?.address && (
-              <p className="text-xs">{storeProfile.address}</p>
-            )}
-            {storeProfile?.socialMedia && (
-              <p className="text-xs">{storeProfile.socialMedia}</p>
-            )}
-          </div>
+          {(storeProfile?.receiptShowLogo !== false) && (
+            <div className="text-center mb-3">
+              {storeProfile?.logo && (
+                <img
+                  src={storeProfile.logo}
+                  alt=""
+                  className="w-12 h-12 mx-auto mb-1 object-contain"
+                />
+              )}
+              <p className="font-bold text-base">
+                {storeProfile?.storeName || 'Kasir Gue'}
+              </p>
+              {(storeProfile?.receiptShowSocial !== false) && (
+                <>
+                  {storeProfile?.address && (
+                    <p className="text-xs">{storeProfile.address}</p>
+                  )}
+                  {storeProfile?.socialMedia && (
+                    <p className="text-xs">{storeProfile.socialMedia}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {(storeProfile?.receiptShowLogo === false) && (
+            <div className="text-center mb-3">
+              <p className="font-bold text-base">
+                {storeProfile?.storeName || 'Kasir Gue'}
+              </p>
+              {(storeProfile?.receiptShowSocial !== false) && (
+                <>
+                  {storeProfile?.address && (
+                    <p className="text-xs">{storeProfile.address}</p>
+                  )}
+                  {storeProfile?.socialMedia && (
+                    <p className="text-xs">{storeProfile.socialMedia}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           <p className="border-t border-dashed border-black my-2" />
 
@@ -1499,7 +1540,7 @@ export default function CashierPage() {
           <p className="border-t border-dashed border-black my-2" />
 
           <p className="text-center text-xs italic">
-            Terima kasih atas kunjungan Anda!
+            {storeProfile?.receiptFooterNote || 'Terima kasih atas kunjungan Anda!'}
           </p>
         </div>,
         document.body

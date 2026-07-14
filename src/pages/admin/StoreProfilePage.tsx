@@ -13,6 +13,11 @@ export default function StoreProfilePage() {
     address: '',
     socialMedia: '',
     logo: '',
+    receiptPaperSize: 'auto' as 'auto' | '58mm' | '80mm',
+    receiptFontSize: 'medium' as 'small' | 'medium' | 'large',
+    receiptShowLogo: true,
+    receiptShowSocial: true,
+    receiptFooterNote: 'Terima kasih atas kunjungan Anda!',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,6 +35,11 @@ export default function StoreProfilePage() {
           address: profile.address || '',
           socialMedia: profile.socialMedia || '',
           logo: profile.logo || '',
+          receiptPaperSize: (profile as any).receiptPaperSize || 'auto',
+          receiptFontSize: (profile as any).receiptFontSize || 'medium',
+          receiptShowLogo: (profile as any).receiptShowLogo !== false,
+          receiptShowSocial: (profile as any).receiptShowSocial !== false,
+          receiptFooterNote: (profile as any).receiptFooterNote || 'Terima kasih atas kunjungan Anda!',
         });
       }
     } catch {
@@ -73,8 +83,13 @@ export default function StoreProfilePage() {
         socialMedia: formData.socialMedia.trim(),
         logo: formData.logo,
         qrisImage: existing?.qrisImage || '',
-      });
-      toast.success('Profil toko berhasil disimpan!');
+        receiptPaperSize: formData.receiptPaperSize,
+        receiptFontSize: formData.receiptFontSize,
+        receiptShowLogo: formData.receiptShowLogo,
+        receiptShowSocial: formData.receiptShowSocial,
+        receiptFooterNote: formData.receiptFooterNote,
+      } as any);
+      toast.success('Profil toko & pengaturan printer berhasil disimpan!');
     } catch {
       toast.error('Gagal menyimpan profil toko');
     } finally {
@@ -278,6 +293,107 @@ export default function StoreProfilePage() {
               )}
             </div>
           </div>
+
+          {/* Pengaturan Printer & Nota */}
+          <div className="rounded-2xl border border-white/10 bg-slate-900/50 backdrop-blur-xl p-6">
+            <h3 className="text-sm font-medium text-slate-300 flex items-center gap-2 mb-4">
+              <Printer className="w-4 h-4 text-indigo-400" />
+              Pengaturan Printer & Nota
+            </h3>
+            
+            <div className="space-y-5">
+              {/* Paper Size Preset */}
+              <div>
+                <label className="text-xs font-medium text-slate-400 block mb-2.5">
+                  Lebar Kertas Struk
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'auto', label: 'Otomatis (Fit)' },
+                    { value: '58mm', label: '58mm (Kecil/EDC)' },
+                    { value: '80mm', label: '80mm (Besar)' }
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, receiptPaperSize: opt.value as any }))}
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-all ${
+                        formData.receiptPaperSize === opt.value
+                          ? 'bg-[hsl(var(--primary))]/20 border-[hsl(var(--primary))] text-white'
+                          : 'bg-slate-800/50 border-white/10 text-slate-400 hover:text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font Size Preset */}
+              <div>
+                <label className="text-xs font-medium text-slate-400 block mb-2.5">
+                  Ukuran Tulisan Struk
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'small', label: 'Kecil' },
+                    { value: 'medium', label: 'Sedang (Bawaan)' },
+                    { value: 'large', label: 'Besar' }
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, receiptFontSize: opt.value as any }))}
+                      className={`px-3 py-2 rounded-lg border text-xs font-medium cursor-pointer transition-all ${
+                        formData.receiptFontSize === opt.value
+                          ? 'bg-[hsl(var(--primary))]/20 border-[hsl(var(--primary))] text-white'
+                          : 'bg-slate-800/50 border-white/10 text-slate-400 hover:text-slate-300 hover:bg-slate-800'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formData.receiptShowLogo}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, receiptShowLogo: e.target.checked }))}
+                    className="w-4 h-4 rounded border-white/10 bg-slate-800 text-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]/50 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                  <span className="text-xs font-medium text-slate-300">Tampilkan Logo</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formData.receiptShowSocial}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, receiptShowSocial: e.target.checked }))}
+                    className="w-4 h-4 rounded border-white/10 bg-slate-800 text-[hsl(var(--primary))] focus:ring-[hsl(var(--primary))]/50 focus:ring-offset-slate-900 cursor-pointer"
+                  />
+                  <span className="text-xs font-medium text-slate-300">Tampilkan Alamat & Medsos</span>
+                </label>
+              </div>
+
+              {/* Footer Note */}
+              <div className="pt-2">
+                <label className="text-xs font-medium text-slate-400 block mb-2">
+                  Catatan Kaki Struk (Footer)
+                </label>
+                <input
+                  type="text"
+                  value={formData.receiptFooterNote}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, receiptFooterNote: e.target.value }))}
+                  placeholder="Terima kasih atas kunjungan Anda!..."
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/50 focus:border-[hsl(var(--primary))]/50 transition-all text-xs"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Preview section */}
@@ -306,29 +422,42 @@ export default function StoreProfilePage() {
             <h3 className="text-sm font-medium text-slate-300 mb-4">Pratinjau Struk Belanja</h3>
             
             {/* The Monospace Receipt Paper Preview */}
-            <div className="rounded-xl bg-white text-black p-5 text-left font-mono text-[11px] leading-relaxed shadow-inner max-w-[280px] mx-auto border border-white/10 select-none">
+            <div 
+              className="rounded-xl bg-white text-black p-4 text-left font-mono shadow-inner mx-auto border border-slate-200 select-none transition-all duration-200"
+              style={{
+                maxWidth: formData.receiptPaperSize === '58mm' ? '200px' : '260px',
+                fontSize: formData.receiptFontSize === 'small' ? '9px' : formData.receiptFontSize === 'large' ? '13px' : '11px',
+                lineHeight: '1.4'
+              }}
+            >
               {/* Header Logo */}
-              {formData.logo ? (
-                <img
-                  src={formData.logo}
-                  alt="Store Logo"
-                  className="w-10 h-10 object-contain mx-auto mb-2"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-slate-100 border border-slate-300 rounded-lg flex items-center justify-center mx-auto mb-2 text-slate-400 text-[8px]">
-                  [LOGO]
-                </div>
+              {formData.receiptShowLogo && (
+                formData.logo ? (
+                  <img
+                    src={formData.logo}
+                    alt="Store Logo"
+                    className="w-10 h-10 object-contain mx-auto mb-2"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-slate-100 border border-slate-300 rounded-lg flex items-center justify-center mx-auto mb-2 text-slate-400 text-[8px]">
+                    [LOGO]
+                  </div>
+                )
               )}
 
               {/* Store details */}
-              <p className="font-bold text-center text-sm leading-tight">
+              <p className="font-bold text-center leading-tight">
                 {formData.storeName || 'NAMA TOKO'}
               </p>
-              {formData.address && (
-                <p className="text-center text-[9px] mt-0.5 leading-tight">{formData.address}</p>
-              )}
-              {formData.socialMedia && (
-                <p className="text-center text-[9px] mt-0.5 leading-tight">{formData.socialMedia}</p>
+              {formData.receiptShowSocial && (
+                <>
+                  {formData.address && (
+                    <p className="text-center text-[9px] mt-0.5 leading-tight">{formData.address}</p>
+                  )}
+                  {formData.socialMedia && (
+                    <p className="text-center text-[9px] mt-0.5 leading-tight">{formData.socialMedia}</p>
+                  )}
+                </>
               )}
 
               <p className="border-t border-dashed border-slate-300 my-2" />
@@ -362,7 +491,7 @@ export default function StoreProfilePage() {
               <p className="border-t border-dashed border-slate-300 my-2" />
 
               {/* Mock totals */}
-              <div className="space-y-0.5 text-[10px]">
+              <div className="space-y-0.5">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span>Rp 50.000</span>
@@ -378,7 +507,9 @@ export default function StoreProfilePage() {
               </div>
 
               <p className="border-t border-dashed border-slate-300 my-2" />
-              <p className="text-center text-[9px] italic">Terima kasih atas kunjungan Anda!</p>
+              <p className="text-center italic">
+                {formData.receiptFooterNote || 'Terima kasih atas kunjungan Anda!'}
+              </p>
             </div>
 
             {/* Test action buttons */}
@@ -422,26 +553,67 @@ export default function StoreProfilePage() {
 
       {/* ── Print-Only Receipt (rendered via React Portal directly under body for perfect clean printing) ──────────────── */}
       {createPortal(
-        <div className="print-receipt hidden print:block bg-white text-black p-6 text-sm font-mono max-w-[80mm] mx-auto">
+        <div 
+          className="print-receipt hidden print:block bg-white text-black font-mono mx-auto"
+          style={{
+            width: '100%',
+            maxWidth: formData.receiptPaperSize === '58mm' 
+              ? '48mm' 
+              : formData.receiptPaperSize === '80mm' 
+                ? '76mm' 
+                : '76mm',
+            fontSize: formData.receiptFontSize === 'small' 
+              ? '9px' 
+              : formData.receiptFontSize === 'large' 
+                ? '13px' 
+                : '11px',
+            lineHeight: '1.4',
+            padding: '2mm'
+          }}
+        >
           {/* Store Header */}
-          <div className="text-center mb-3">
-            {formData.logo && (
-              <img
-                src={formData.logo}
-                alt=""
-                className="w-12 h-12 mx-auto mb-1 object-contain"
-              />
-            )}
-            <p className="font-bold text-base">
-              {formData.storeName || 'Kasir Gue'}
-            </p>
-            {formData.address && (
-              <p className="text-xs">{formData.address}</p>
-            )}
-            {formData.socialMedia && (
-              <p className="text-xs">{formData.socialMedia}</p>
-            )}
-          </div>
+          {formData.receiptShowLogo && (
+            <div className="text-center mb-3">
+              {formData.logo && (
+                <img
+                  src={formData.logo}
+                  alt=""
+                  className="w-12 h-12 mx-auto mb-1 object-contain"
+                />
+              )}
+              <p className="font-bold text-base">
+                {formData.storeName || 'Kasir Gue'}
+              </p>
+              {formData.receiptShowSocial && (
+                <>
+                  {formData.address && (
+                    <p className="text-xs">{formData.address}</p>
+                  )}
+                  {formData.socialMedia && (
+                    <p className="text-xs">{formData.socialMedia}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {!formData.receiptShowLogo && (
+            <div className="text-center mb-3">
+              <p className="font-bold text-base">
+                {formData.storeName || 'Kasir Gue'}
+              </p>
+              {formData.receiptShowSocial && (
+                <>
+                  {formData.address && (
+                    <p className="text-xs">{formData.address}</p>
+                  )}
+                  {formData.socialMedia && (
+                    <p className="text-xs">{formData.socialMedia}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           <p className="border-t border-dashed border-black my-2" />
 
@@ -501,7 +673,7 @@ export default function StoreProfilePage() {
           <p className="border-t border-dashed border-black my-2" />
 
           <p className="text-center text-xs italic">
-            Terima kasih atas kunjungan Anda!
+            {formData.receiptFooterNote || 'Terima kasih atas kunjungan Anda!'}
           </p>
         </div>,
         document.body

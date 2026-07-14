@@ -9,6 +9,11 @@ export interface StoreProfile {
   socialMedia: string;
   logo: string; // Base64
   qrisImage: string; // Base64
+  receiptPaperSize?: '58mm' | '80mm' | 'auto';
+  receiptFontSize?: 'small' | 'medium' | 'large';
+  receiptShowLogo?: boolean;
+  receiptShowSocial?: boolean;
+  receiptFooterNote?: string;
 }
 
 export interface Product {
