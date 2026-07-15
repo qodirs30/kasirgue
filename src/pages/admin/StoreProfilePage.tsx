@@ -99,91 +99,137 @@ export default function StoreProfilePage() {
 
   const testPDF = () => {
     try {
+      const paperSize = formData.receiptPaperSize;
+      const fontSizeSetting = formData.receiptFontSize;
+      
+      const width = paperSize === '58mm' ? 58 : 80;
+      const baseHeight = paperSize === '58mm' ? 85 : 95;
+      const height = baseHeight + (2 * 9.5); // Mock receipt always has 2 items
+      
       const doc = new jsPDF({
         unit: 'mm',
-        format: [80, 150],
+        format: [width, height],
       });
 
-      let y = 10;
-      if (formData.logo) {
+      let sizeStore = 13;
+      let sizeBody = 9.5;
+      let sizeSmall = 8;
+      
+      if (fontSizeSetting === 'small') {
+        sizeStore = 11;
+        sizeBody = 8;
+        sizeSmall = 7;
+      } else if (fontSizeSetting === 'large') {
+        sizeStore = 16;
+        sizeBody = 11.5;
+        sizeSmall = 9.5;
+      }
+      
+      doc.setFont('Helvetica', 'normal');
+      let y = 8;
+      
+      if (formData.receiptShowLogo && formData.logo) {
         try {
-          doc.addImage(formData.logo, 'PNG', 32, y, 16, 16);
-          y += 20;
+          const logoSize = paperSize === '58mm' ? 12 : 16;
+          const logoX = (width - logoSize) / 2;
+          doc.addImage(formData.logo, 'PNG', logoX, y, logoSize, logoSize);
+          y += logoSize + 4;
         } catch (e) {
           console.error("Failed to add logo to PDF: ", e);
         }
       }
 
-      doc.setFont('Courier', 'bold');
-      doc.setFontSize(12);
-      doc.text(formData.storeName || 'KASIR GUE', 40, y, { align: 'center' });
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(sizeStore);
+      doc.text(formData.storeName || 'KASIR GUE', width / 2, y, { align: 'center' });
 
-      doc.setFont('Courier', 'normal');
-      doc.setFontSize(8);
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(sizeBody);
 
-      if (formData.address) {
-        y += 5;
-        doc.text(formData.address, 40, y, { align: 'center', maxWidth: 60 });
+      if (formData.receiptShowSocial) {
+        if (formData.address) {
+          y += 5;
+          doc.setFontSize(sizeSmall);
+          doc.text(formData.address, width / 2, y, { align: 'center', maxWidth: width - 10 });
+        }
+
+        if (formData.socialMedia) {
+          y += 4.5;
+          doc.setFontSize(sizeSmall);
+          doc.text(formData.socialMedia, width / 2, y, { align: 'center' });
+        }
       }
 
-      if (formData.socialMedia) {
-        y += 5;
-        doc.text(formData.socialMedia, 40, y, { align: 'center' });
-      }
+      const divLine = paperSize === '58mm' ? '---------------------------------------' : '---------------------------------------------------';
+      const marginX = paperSize === '58mm' ? 4 : 6;
+      const rightAlignX = width - marginX;
 
       y += 5;
-      doc.text('----------------------------------------', 40, y, { align: 'center' });
-      y += 5;
-      doc.text(new Date().toLocaleString('id-ID'), 40, y, { align: 'center' });
-      y += 5;
-      doc.text('----------------------------------------', 40, y, { align: 'center' });
+      doc.setFontSize(sizeSmall);
+      doc.text(divLine, width / 2, y, { align: 'center' });
+      y += 4.5;
+      doc.text(new Date().toLocaleDateString('id-ID') + ', ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), width / 2, y, { align: 'center' });
+      y += 4;
+      doc.text(divLine, width / 2, y, { align: 'center' });
 
       // Mock Items
+      doc.setFontSize(sizeBody);
       y += 5;
-      doc.text('Kopi Susu Gula Aren', 12, y);
-      y += 4;
-      doc.text('  2 x Rp 15.000', 12, y);
-      doc.text('Rp 30.000', 68, y, { align: 'right' });
+      doc.setFont('Helvetica', 'bold');
+      doc.text('Kopi Susu Gula Aren', marginX, y);
+      y += 4.5;
+      doc.setFont('Helvetica', 'normal');
+      doc.text('2 x Rp 15.000', marginX, y);
+      doc.text('Rp 30.000', rightAlignX, y, { align: 'right' });
 
       y += 5;
-      doc.text('Roti Bakar Cokelat', 12, y);
-      y += 4;
-      doc.text('  1 x Rp 20.000', 12, y);
-      doc.text('Rp 20.000', 68, y, { align: 'right' });
+      doc.setFont('Helvetica', 'bold');
+      doc.text('Roti Bakar Cokelat', marginX, y);
+      y += 4.5;
+      doc.setFont('Helvetica', 'normal');
+      doc.text('1 x Rp 20.000', marginX, y);
+      doc.text('Rp 20.000', rightAlignX, y, { align: 'right' });
 
       y += 5;
-      doc.text('----------------------------------------', 40, y, { align: 'center' });
+      doc.setFontSize(sizeSmall);
+      doc.text(divLine, width / 2, y, { align: 'center' });
+
+      // Mock Totals
+      doc.setFontSize(sizeBody);
+      y += 5;
+      doc.text('Subtotal:', marginX, y);
+      doc.text('Rp 50.000', rightAlignX, y, { align: 'right' });
 
       y += 5;
-      doc.text('Subtotal:', 12, y);
-      doc.text('Rp 50.000', 68, y, { align: 'right' });
+      doc.text('Diskon:', marginX, y);
+      doc.text('-Rp 5.000', rightAlignX, y, { align: 'right' });
+
+      y += 5.5;
+      doc.setFont('Helvetica', 'bold');
+      doc.text('TOTAL:', marginX, y);
+      doc.text('Rp 45.000', rightAlignX, y, { align: 'right' });
+      doc.setFont('Helvetica', 'normal');
 
       y += 5;
-      doc.text('Diskon:', 12, y);
-      doc.text('-Rp 5.000', 68, y, { align: 'right' });
+      doc.setFontSize(sizeSmall);
+      doc.text('Metode: Tunai', marginX, y);
+
+      y += 4.5;
+      doc.text('Diterima:', marginX, y);
+      doc.text('Rp 50.000', rightAlignX, y, { align: 'right' });
+
+      y += 4.5;
+      doc.text('Kembalian:', marginX, y);
+      doc.text('Rp 5.000', rightAlignX, y, { align: 'right' });
 
       y += 5;
-      doc.setFont('Courier', 'bold');
-      doc.text('TOTAL:', 12, y);
-      doc.text('Rp 45.000', 68, y, { align: 'right' });
-      doc.setFont('Courier', 'normal');
+      doc.setFontSize(sizeSmall);
+      doc.text(divLine, width / 2, y, { align: 'center' });
 
       y += 5;
-      doc.text('Metode:', 12, y);
-      doc.text('Tunai', 68, y, { align: 'right' });
-
-      y += 5;
-      doc.text('Diterima:', 12, y);
-      doc.text('Rp 50.000', 68, y, { align: 'right' });
-
-      y += 5;
-      doc.text('Kembalian:', 12, y);
-      doc.text('Rp 5.000', 68, y, { align: 'right' });
-
-      y += 5;
-      doc.text('----------------------------------------', 40, y, { align: 'center' });
-      y += 5;
-      doc.text('Terima kasih atas kunjungan Anda!', 40, y, { align: 'center' });
+      doc.setFontSize(sizeBody);
+      doc.setFont('Helvetica', 'oblique');
+      doc.text(formData.receiptFooterNote || 'Terima kasih atas kunjungan Anda!', width / 2, y, { align: 'center', maxWidth: width - 8 });
 
       doc.save('uji-coba-struk.pdf');
       toast.success('Uji coba PDF berhasil disimpan!');

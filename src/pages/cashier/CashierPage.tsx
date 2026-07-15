@@ -457,101 +457,157 @@ export default function CashierPage() {
   const exportReceiptPDF = () => {
     if (!currentTransaction) return;
     try {
+      const paperSize = storeProfile?.receiptPaperSize || 'auto';
+      const fontSizeSetting = storeProfile?.receiptFontSize || 'medium';
+      
+      // Determine PDF width and height dynamically
+      const width = paperSize === '58mm' ? 58 : 80;
+      
+      // Base height: header details + payment details + thank you note
+      const baseHeight = paperSize === '58mm' ? 85 : 95;
+      const height = baseHeight + (currentTransaction.items.length * 95 / 10); // scale height based on number of items
+      
       const doc = new jsPDF({
         unit: 'mm',
-        format: [80, 180], // 80mm width standard thermal roll size
+        format: [width, height],
       });
 
-      let y = 10;
+      // Set Font Sizes based on user settings
+      let sizeStore = 13;
+      let sizeBody = 9.5;
+      let sizeSmall = 8;
+      
+      if (fontSizeSetting === 'small') {
+        sizeStore = 11;
+        sizeBody = 8;
+        sizeSmall = 7;
+      } else if (fontSizeSetting === 'large') {
+        sizeStore = 16;
+        sizeBody = 11.5;
+        sizeSmall = 9.5;
+      }
+      
+      // Use Helvetica (thick sans-serif) instead of Courier for much clearer print quality!
+      doc.setFont('Helvetica', 'normal');
+
+      let y = 8;
       
       // Store Header Logo
-      if (storeProfile?.logo) {
+      const showLogo = storeProfile?.receiptShowLogo !== false;
+      if (showLogo && storeProfile?.logo) {
         try {
-          // logo is base64 PNG, add it centered
-          doc.addImage(storeProfile.logo, 'PNG', 32, y, 16, 16);
-          y += 20;
+          const logoSize = paperSize === '58mm' ? 12 : 16;
+          const logoX = (width - logoSize) / 2;
+          doc.addImage(storeProfile.logo, 'PNG', logoX, y, logoSize, logoSize);
+          y += logoSize + 4;
         } catch (e) {
           console.error("Failed to add logo to PDF: ", e);
         }
       }
 
-      // Set font & Store Name
-      doc.setFont('Courier', 'bold');
-      doc.setFontSize(12);
-      doc.text(storeProfile?.storeName || 'KASIR GUE', 40, y, { align: 'center' });
+      // Store Name
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(sizeStore);
+      doc.text(storeProfile?.storeName || 'KASIR GUE', width / 2, y, { align: 'center' });
       
-      doc.setFont('Courier', 'normal');
-      doc.setFontSize(8);
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(sizeBody);
       
-      if (storeProfile?.address) {
-        y += 5;
-        doc.text(storeProfile.address, 40, y, { align: 'center', maxWidth: 60 });
-      }
-      
-      if (storeProfile?.socialMedia) {
-        y += 5;
-        doc.text(storeProfile.socialMedia, 40, y, { align: 'center' });
+      const showSocial = storeProfile?.receiptShowSocial !== false;
+      if (showSocial) {
+        if (storeProfile?.address) {
+          y += 5;
+          doc.setFontSize(sizeSmall);
+          doc.text(storeProfile.address, width / 2, y, { align: 'center', maxWidth: width - 10 });
+        }
+        
+        if (storeProfile?.socialMedia) {
+          y += 4.5;
+          doc.setFontSize(sizeSmall);
+          doc.text(storeProfile.socialMedia, width / 2, y, { align: 'center' });
+        }
       }
 
+      // Dividers
+      const divLine = paperSize === '58mm' ? '---------------------------------------' : '---------------------------------------------------';
+      const marginX = paperSize === '58mm' ? 4 : 6;
+      const rightAlignX = width - marginX;
+      
       y += 5;
-      doc.text('----------------------------------------', 40, y, { align: 'center' });
-
-      y += 5;
-      doc.text(formatDateTime(new Date(currentTransaction.timestamp)), 40, y, { align: 'center' });
+      doc.setFontSize(sizeSmall);
+      doc.text(divLine, width / 2, y, { align: 'center' });
+      
+      y += 4.5;
+      doc.text(formatDateTime(new Date(currentTransaction.timestamp)), width / 2, y, { align: 'center' });
 
       if (currentTransaction.customerName) {
         y += 4;
-        doc.text(`Pelanggan: ${currentTransaction.customerName}`, 40, y, { align: 'center', maxWidth: 60 });
+        doc.setFont('Helvetica', 'bold');
+        doc.text(`Pelanggan: ${currentTransaction.customerName}`, width / 2, y, { align: 'center', maxWidth: width - 10 });
+        doc.setFont('Helvetica', 'normal');
       }
 
-      y += 5;
-      doc.text('----------------------------------------', 40, y, { align: 'center' });
+      y += 4;
+      doc.setFontSize(sizeSmall);
+      doc.text(divLine, width / 2, y, { align: 'center' });
 
       // Items
+      doc.setFontSize(sizeBody);
       currentTransaction.items.forEach((item) => {
         y += 5;
-        doc.text(item.name, 5, y);
-        y += 4;
-        doc.text(`${item.quantity} x ${formatRupiah(item.price)}`, 5, y);
+        doc.setFont('Helvetica', 'bold');
+        doc.text(item.name, marginX, y);
+        y += 4.5;
+        doc.setFont('Helvetica', 'normal');
+        doc.text(`${item.quantity} x ${formatRupiah(item.price)}`, marginX, y);
         const itemTotal = formatRupiah(item.price * item.quantity);
-        doc.text(itemTotal, 75, y, { align: 'right' });
+        doc.text(itemTotal, rightAlignX, y, { align: 'right' });
       });
 
       y += 5;
-      doc.text('----------------------------------------', 40, y, { align: 'center' });
+      doc.setFontSize(sizeSmall);
+      doc.text(divLine, width / 2, y, { align: 'center' });
 
       // Totals
+      doc.setFontSize(sizeBody);
       y += 5;
-      doc.text('Subtotal:', 5, y);
-      doc.text(formatRupiah(currentTransaction.subtotal), 75, y, { align: 'right' });
+      doc.text('Subtotal:', marginX, y);
+      doc.text(formatRupiah(currentTransaction.subtotal), rightAlignX, y, { align: 'right' });
 
       if (currentTransaction.discount > 0) {
         y += 5;
-        doc.text('Diskon:', 5, y);
-        doc.text(`-${formatRupiah(currentTransaction.discount)}`, 75, y, { align: 'right' });
+        doc.text('Diskon:', marginX, y);
+        doc.text(`-${formatRupiah(currentTransaction.discount)}`, rightAlignX, y, { align: 'right' });
       }
 
-      y += 5;
-      doc.setFont('Courier', 'bold');
-      doc.text('TOTAL:', 5, y);
-      doc.text(formatRupiah(currentTransaction.total), 75, y, { align: 'right' });
-      doc.setFont('Courier', 'normal');
+      y += 5.5;
+      doc.setFont('Helvetica', 'bold');
+      doc.text('TOTAL:', marginX, y);
+      doc.text(formatRupiah(currentTransaction.total), rightAlignX, y, { align: 'right' });
+      doc.setFont('Helvetica', 'normal');
 
       y += 5;
-      doc.text(`Metode: ${currentTransaction.paymentMethod === 'cash' ? 'Tunai' : 'QRIS'}`, 5, y);
+      doc.setFontSize(sizeSmall);
+      doc.text(`Metode: ${currentTransaction.paymentMethod === 'cash' ? 'Tunai' : 'QRIS'}`, marginX, y);
 
       if (currentTransaction.paymentMethod === 'cash') {
-        y += 5;
-        doc.text('Diterima:', 5, y);
-        doc.text(formatRupiah(currentTransaction.cashReceived || 0), 75, y, { align: 'right' });
+        y += 4.5;
+        doc.text('Diterima:', marginX, y);
+        doc.text(formatRupiah(currentTransaction.cashReceived || 0), rightAlignX, y, { align: 'right' });
 
-        y += 5;
-        doc.text('Kembalian:', 5, y);
-        doc.text(formatRupiah(currentTransaction.change || 0), 75, y, { align: 'right' });
+        y += 4.5;
+        doc.text('Kembalian:', marginX, y);
+        doc.text(formatRupiah(currentTransaction.change || 0), rightAlignX, y, { align: 'right' });
       }
 
-      y += 10;
-      doc.text('TERIMA KASIH ATAS KUNJUNGAN ANDA', 40, y, { align: 'center' });
+      y += 5;
+      doc.setFontSize(sizeSmall);
+      doc.text(divLine, width / 2, y, { align: 'center' });
+
+      y += 5;
+      doc.setFontSize(sizeBody);
+      doc.setFont('Helvetica', 'oblique');
+      doc.text(storeProfile?.receiptFooterNote || 'Terima kasih atas kunjungan Anda!', width / 2, y, { align: 'center', maxWidth: width - 8 });
 
       doc.save(`struk-${currentTransaction.id || Date.now()}.pdf`);
       toast.success('PDF Struk berhasil disimpan!');
@@ -1402,7 +1458,7 @@ export default function CashierPage() {
       {/* ── Print-Only Receipt (rendered via React Portal directly under body for perfect clean printing) ──────────────── */}
       {showReceipt && currentTransaction && createPortal(
         <div 
-          className="print-receipt hidden print:block bg-white text-black font-mono mx-auto"
+          className="print-receipt hidden print:block bg-white text-black font-sans mx-auto"
           style={{
             width: '100%',
             maxWidth: storeProfile?.receiptPaperSize === '58mm' 
@@ -1411,10 +1467,10 @@ export default function CashierPage() {
                 ? '76mm' 
                 : '76mm',
             fontSize: storeProfile?.receiptFontSize === 'small' 
-              ? '9px' 
+              ? '10px' 
               : storeProfile?.receiptFontSize === 'large' 
-                ? '13px' 
-                : '11px',
+                ? '15px' 
+                : '12px',
             lineHeight: '1.4',
             padding: '2mm'
           }}
@@ -1429,49 +1485,49 @@ export default function CashierPage() {
                   className="w-12 h-12 mx-auto mb-1 object-contain"
                 />
               )}
-              <p className="font-bold text-base">
+              <p className="font-bold text-[1.25em] leading-tight">
                 {storeProfile?.storeName || 'Kasir Gue'}
               </p>
               {(storeProfile?.receiptShowSocial !== false) && (
-                <>
+                <div className="text-[0.9em] leading-snug mt-1">
                   {storeProfile?.address && (
-                    <p className="text-xs">{storeProfile.address}</p>
+                    <p>{storeProfile.address}</p>
                   )}
                   {storeProfile?.socialMedia && (
-                    <p className="text-xs">{storeProfile.socialMedia}</p>
+                    <p>{storeProfile.socialMedia}</p>
                   )}
-                </>
+                </div>
               )}
             </div>
           )}
 
           {(storeProfile?.receiptShowLogo === false) && (
             <div className="text-center mb-3">
-              <p className="font-bold text-base">
+              <p className="font-bold text-[1.25em] leading-tight">
                 {storeProfile?.storeName || 'Kasir Gue'}
               </p>
               {(storeProfile?.receiptShowSocial !== false) && (
-                <>
+                <div className="text-[0.9em] leading-snug mt-1">
                   {storeProfile?.address && (
-                    <p className="text-xs">{storeProfile.address}</p>
+                    <p>{storeProfile.address}</p>
                   )}
                   {storeProfile?.socialMedia && (
-                    <p className="text-xs">{storeProfile.socialMedia}</p>
+                    <p>{storeProfile.socialMedia}</p>
                   )}
-                </>
+                </div>
               )}
             </div>
           )}
 
           <p className="border-t border-dashed border-black my-2" />
 
-          <p className="text-xs text-center">
+          <p className="text-[0.9em] text-center">
             {formatDateTime(new Date(currentTransaction.timestamp))}
           </p>
 
           {/* Customer Name */}
           {currentTransaction.customerName && (
-            <p className="text-xs text-center font-bold">
+            <p className="text-[0.9em] text-center font-bold">
               Pelanggan: {currentTransaction.customerName}
             </p>
           )}
@@ -1480,15 +1536,15 @@ export default function CashierPage() {
 
           {/* Items */}
           {currentTransaction.items.map((item, idx) => (
-            <div key={idx} className="flex justify-between text-xs mb-1">
+            <div key={idx} className="flex justify-between mb-1">
               <div>
-                <span>{item.name}</span>
+                <span className="font-semibold">{item.name}</span>
                 <br />
-                <span className="text-[10px]">
+                <span className="text-[0.85em] text-slate-700">
                   {item.quantity} × {formatRupiah(item.price)}
                 </span>
               </div>
-              <span className="font-medium">
+              <span className="font-semibold">
                 {formatRupiah(item.price * item.quantity)}
               </span>
             </div>
@@ -1496,7 +1552,7 @@ export default function CashierPage() {
 
           <p className="border-t border-dashed border-black my-2" />
 
-          <div className="text-xs space-y-0.5">
+          <div className="space-y-0.5">
             <div className="flex justify-between">
               <span>Subtotal</span>
               <span>{formatRupiah(currentTransaction.subtotal)}</span>
@@ -1507,11 +1563,11 @@ export default function CashierPage() {
                 <span>-{formatRupiah(currentTransaction.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-sm border-t border-dashed border-black pt-1 mt-1">
+            <div className="flex justify-between font-bold text-[1.15em] border-t border-dashed border-black pt-1 mt-1">
               <span>Total</span>
               <span>{formatRupiah(currentTransaction.total)}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between text-[0.95em]">
               <span>Metode</span>
               <span>
                 {currentTransaction.paymentMethod === 'cash'
@@ -1520,7 +1576,7 @@ export default function CashierPage() {
               </span>
             </div>
             {currentTransaction.paymentMethod === 'cash' && (
-              <>
+              <div className="text-[0.95em] space-y-0.5">
                 <div className="flex justify-between">
                   <span>Diterima</span>
                   <span>
@@ -1533,13 +1589,13 @@ export default function CashierPage() {
                     {formatRupiah(currentTransaction.change || 0)}
                   </span>
                 </div>
-              </>
+              </div>
             )}
           </div>
 
           <p className="border-t border-dashed border-black my-2" />
 
-          <p className="text-center text-xs italic">
+          <p className="text-center text-[0.9em] italic">
             {storeProfile?.receiptFooterNote || 'Terima kasih atas kunjungan Anda!'}
           </p>
         </div>,

@@ -192,15 +192,13 @@
   .print-receipt {
     display: block !important;
     position: relative !important;
-    width: 100% !important;
-    max-width: 76mm !important;
     margin: 0 auto !important;
-    padding: 4mm !important;
-    font-size: 11px !important;
+    padding: 3mm !important;
     line-height: 1.4 !important;
     color: black !important;
     background: white !important;
     box-shadow: none !important;
     border: none !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
   }
 }
