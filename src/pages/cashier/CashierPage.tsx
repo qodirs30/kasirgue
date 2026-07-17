@@ -52,6 +52,9 @@ export default function CashierPage() {
   const [currentTransaction, setCurrentTransaction] = useState<Transaction | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showPending, setShowPending] = useState(false);
+  const [showSnSelector, setShowSnSelector] = useState(false);
+  const [snSelectorProduct, setSnSelectorProduct] = useState<Product | null>(null);
+  const [tempSelectedSns, setTempSelectedSns] = useState<string[]>([]);
   const [pendingCarts, setPendingCarts] = useState<PendingCart[]>([]);
   const [todayTransactions, setTodayTransactions] = useState<Transaction[]>([]);
   const [storeProfile, setStoreProfile] = useState<StoreProfile | null>(null);
@@ -277,11 +280,19 @@ export default function CashierPage() {
   }, [products, search, selectedCategory]);
 
   // ── Cart Operations ────────────────────────────────────────────────────────
+  // ── Cart Operations ────────────────────────────────────────────────────────
   const addToCart = (product: Product) => {
     if (product.stock <= 0) {
       toast.error('Stok habis!');
       return;
     }
+
+    if (product.serialNumbers && product.serialNumbers.length > 0) {
+      setSnSelectorProduct(product);
+      setShowSnSelector(true);
+      return;
+    }
+
     setCart((prev) => {
       const existing = prev.find((i) => i.id === product.id);
       if (existing) {
@@ -304,23 +315,168 @@ export default function CashierPage() {
     });
   };
 
+  const addToCartWithSn = (product: Product, sn: string) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === product.id);
+      if (existing) {
+        const selectedSns = existing.selectedSerialNumbers || [];
+        if (selectedSns.includes(sn)) {
+          toast.error(`Serial Number ${sn} sudah ada di keranjang!`);
+          return prev;
+        }
+        if (selectedSns.length >= product.stock) {
+          toast.error('Stok tidak mencukupi!');
+          return prev;
+        }
+        return prev.map((i) =>
+          i.id === product.id
+            ? {
+                ...i,
+                quantity: selectedSns.length + 1,
+                selectedSerialNumbers: [...selectedSns, sn],
+              }
+            : i
+        );
+      }
+      return [
+        ...prev,
+        {
+          ...product,
+          id: product.id!,
+          quantity: 1,
+          selectedSerialNumbers: [sn],
+        },
+      ];
+    });
+  };
+
+  const addMultipleSnsToCart = (product: Product, sns: string[]) => {
+    if (sns.length === 0) return;
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === product.id);
+      if (existing) {
+        const currentSns = existing.selectedSerialNumbers || [];
+        const newSns = [...currentSns];
+        for (const sn of sns) {
+          if (!newSns.includes(sn)) {
+            newSns.push(sn);
+          }
+        }
+        if (newSns.length > product.stock) {
+          toast.error('Jumlah SN melebihi stok yang tersedia!');
+          return prev;
+        }
+        return prev.map((i) =>
+          i.id === product.id
+            ? {
+                ...i,
+                quantity: newSns.length,
+                selectedSerialNumbers: newSns,
+              }
+            : i
+        );
+      }
+      return [
+        ...prev,
+        {
+          ...product,
+          id: product.id!,
+          quantity: sns.length,
+          selectedSerialNumbers: sns,
+        },
+      ];
+    });
+  };
+
+  const removeSnFromCartItem = (productId: number, sn: string) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === productId);
+      if (!existing) return prev;
+      const currentSns = existing.selectedSerialNumbers || [];
+      const nextSns = currentSns.filter((s) => s !== sn);
+      if (nextSns.length === 0) {
+        return prev.filter((i) => i.id !== productId);
+      }
+      return prev.map((i) =>
+        i.id === productId
+          ? {
+              ...i,
+              quantity: nextSns.length,
+              selectedSerialNumbers: nextSns,
+            }
+          : i
+      );
+    });
+  };
+
   const removeFromCart = (productId: number) => {
     setCart((prev) => prev.filter((i) => i.id !== productId));
   };
 
   const updateQuantity = (productId: number, delta: number) => {
-    setCart((prev) =>
-      prev.map((item) => {
-        if (item.id !== productId) return item;
-        const newQty = item.quantity + delta;
-        if (newQty <= 0) return item;
-        if (newQty > item.stock) {
-          toast.error('Stok tidak mencukupi!');
-          return item;
+    setCart((prev) => {
+      const item = prev.find((i) => i.id === productId);
+      if (!item) return prev;
+
+      if (item.selectedSerialNumbers && item.selectedSerialNumbers.length > 0) {
+        if (delta === -1) {
+          const nextSns = [...item.selectedSerialNumbers];
+          nextSns.pop();
+          if (nextSns.length === 0) {
+            return prev.filter((i) => i.id !== productId);
+          }
+          return prev.map((i) =>
+            i.id === productId
+              ? { ...i, quantity: nextSns.length, selectedSerialNumbers: nextSns }
+              : i
+          );
+        } else if (delta === 1) {
+          setSnSelectorProduct(item);
+          setShowSnSelector(true);
+          return prev;
         }
-        return { ...item, quantity: newQty };
-      })
-    );
+      }
+
+      const newQty = item.quantity + delta;
+      if (newQty <= 0) return prev.filter((i) => i.id !== productId);
+      if (newQty > item.stock) {
+        toast.error('Stok tidak mencukupi!');
+        return prev;
+      }
+      return prev.map((i) => (i.id === productId ? { ...i, quantity: newQty } : i));
+    });
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const query = search.trim();
+      if (!query) return;
+
+      const productBySn = products.find((p) =>
+        p.serialNumbers?.some((sn) => sn.toLowerCase() === query.toLowerCase())
+      );
+      if (productBySn) {
+        const matchedSn = productBySn.serialNumbers?.find(
+          (sn) => sn.toLowerCase() === query.toLowerCase()
+        ) || query;
+
+        addToCartWithSn(productBySn, matchedSn);
+        setSearch('');
+        return;
+      }
+
+      const productBySku = products.find(
+        (p) => p.sku.toLowerCase() === query.toLowerCase()
+      );
+      if (productBySku) {
+        addToCart(productBySku);
+        setSearch('');
+        return;
+      }
+
+      toast.error('Produk atau Serial Number tidak ditemukan!');
+    }
   };
 
   // ── Payment ────────────────────────────────────────────────────────────────
@@ -343,6 +499,7 @@ export default function CashierPage() {
         quantity: item.quantity,
         price: item.sellPrice,
         buyPrice: item.buyPrice,
+        serialNumbers: item.selectedSerialNumbers || [],
       })),
       subtotal,
       discount: discountAmount,
@@ -359,11 +516,19 @@ export default function CashierPage() {
 
     const id = await db.transactions.add(transaction);
 
-    // Update stock
+    // Update stock & serial numbers
     for (const item of cart) {
       const product = await db.products.get(item.id!);
       if (product) {
-        await db.products.update(item.id!, { stock: product.stock - item.quantity });
+        const updateData: Partial<Product> = {
+          stock: product.stock - item.quantity,
+        };
+        if (product.serialNumbers && item.selectedSerialNumbers) {
+          updateData.serialNumbers = product.serialNumbers.filter(
+            (sn) => !item.selectedSerialNumbers!.includes(sn)
+          );
+        }
+        await db.products.update(item.id!, updateData);
       }
     }
 
@@ -424,13 +589,24 @@ export default function CashierPage() {
 
     await db.transactions.update(tx.id!, { status: 'voided' });
 
-    // Restore stock
+    // Restore stock & serial numbers
     for (const item of tx.items) {
       const product = await db.products.get(item.productId);
       if (product) {
-        await db.products.update(item.productId, {
+        const updateData: Partial<Product> = {
           stock: product.stock + item.quantity,
-        });
+        };
+        if (item.serialNumbers && item.serialNumbers.length > 0) {
+          const currentSns = product.serialNumbers || [];
+          const newSns = [...currentSns];
+          for (const sn of item.serialNumbers) {
+            if (!newSns.includes(sn)) {
+              newSns.push(sn);
+            }
+          }
+          updateData.serialNumbers = newSns;
+        }
+        await db.products.update(item.productId, updateData);
       }
     }
 
@@ -557,6 +733,15 @@ export default function CashierPage() {
         y += 5;
         doc.setFont('Helvetica', 'bold');
         doc.text(item.name, marginX, y);
+
+        if (item.serialNumbers && item.serialNumbers.length > 0) {
+          y += 4;
+          doc.setFont('Helvetica', 'oblique');
+          doc.setFontSize(sizeSmall);
+          doc.text(`SN: ${item.serialNumbers.join(', ')}`, marginX, y, { maxWidth: rightAlignX - marginX });
+          doc.setFontSize(sizeBody);
+        }
+
         y += 4.5;
         doc.setFont('Helvetica', 'normal');
         doc.text(`${item.quantity} x ${formatRupiah(item.price)}`, marginX, y);
@@ -667,9 +852,10 @@ export default function CashierPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               type="text"
-              placeholder="Cari produk atau SKU..."
+              placeholder="Cari produk, SKU atau SN..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/80 border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-hex,#6366f1)]/40 focus:border-[var(--primary-hex,#6366f1)]/40 transition-all duration-200"
             />
             {search && (
@@ -854,6 +1040,25 @@ export default function CashierPage() {
                       <h4 className="font-medium text-sm text-white truncate">
                         {item.name}
                       </h4>
+                      {item.selectedSerialNumbers && item.selectedSerialNumbers.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1 mb-1">
+                          {item.selectedSerialNumbers.map((sn) => (
+                            <span
+                              key={sn}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/25 text-[10px] text-indigo-400 font-mono"
+                            >
+                              <span>{sn}</span>
+                              <button
+                                onClick={() => removeSnFromCartItem(item.id!, sn)}
+                                className="text-[10px] hover:text-red-400 ml-0.5 transition-colors cursor-pointer"
+                                title="Hapus SN"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-xs text-slate-500 mt-0.5">
                         {formatRupiah(item.sellPrice)} × {item.quantity}
                       </p>
@@ -1351,6 +1556,11 @@ export default function CashierPage() {
                         <span className="text-white truncate block">
                           {item.name}
                         </span>
+                        {item.serialNumbers && item.serialNumbers.length > 0 && (
+                          <span className="block text-[10px] text-indigo-400 font-mono italic mt-0.5">
+                            SN: {item.serialNumbers.join(', ')}
+                          </span>
+                        )}
                         <span className="text-xs text-slate-500">
                           {item.quantity} × {formatRupiah(item.price)}
                         </span>
@@ -1539,6 +1749,11 @@ export default function CashierPage() {
             <div key={idx} className="flex justify-between mb-1">
               <div>
                 <span className="font-semibold">{item.name}</span>
+                {item.serialNumbers && item.serialNumbers.length > 0 && (
+                  <span className="block text-[0.8em] text-slate-800 font-mono italic">
+                    SN: {item.serialNumbers.join(', ')}
+                  </span>
+                )}
                 <br />
                 <span className="text-[0.85em] text-slate-700">
                   {item.quantity} × {formatRupiah(item.price)}
@@ -1814,6 +2029,136 @@ export default function CashierPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          SERIAL NUMBER SELECTOR MODAL
+          ══════════════════════════════════════════════════════════════════════ */}
+      {showSnSelector && snSelectorProduct && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 max-h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">🔑</span>
+                <div className="text-left">
+                  <h3 className="text-base font-bold text-white leading-tight">
+                    Pilih Serial Number
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {snSelectorProduct.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSnSelector(false);
+                  setSnSelectorProduct(null);
+                  setTempSelectedSns([]);
+                }}
+                className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content / SN List */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {(() => {
+                const cartItem = cart.find(i => i.id === snSelectorProduct.id);
+                const selectedInCart = cartItem?.selectedSerialNumbers || [];
+                const availableSns = (snSelectorProduct.serialNumbers || []).filter(
+                  (sn) => !selectedInCart.includes(sn)
+                );
+
+                if (availableSns.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 text-slate-500 text-center">
+                      <span className="text-3xl mb-3">⚠️</span>
+                      <p className="text-sm font-medium">Stok SN Habis</p>
+                      <p className="text-xs text-slate-600 mt-1">
+                        Semua Serial Number produk ini sudah dimasukkan ke keranjang belanja atau tidak tersedia lagi.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2">
+                    <p className="text-xs text-slate-400 font-medium mb-3">
+                      Pilih satu atau lebih Serial Number berikut:
+                    </p>
+                    <div className="grid grid-cols-1 gap-2 max-h-[40vh] overflow-y-auto pr-1">
+                      {availableSns.map((sn) => {
+                        const isChecked = tempSelectedSns.includes(sn);
+                        return (
+                          <label
+                            key={sn}
+                            className={`flex items-center justify-between p-3 rounded-lg border text-sm font-mono transition-all duration-200 cursor-pointer ${
+                              isChecked
+                                ? 'bg-[var(--primary-hex,#6366f1)]/10 border-[var(--primary-hex,#6366f1)] text-white font-bold'
+                                : 'bg-white/5 border-white/5 text-slate-300 hover:bg-white/10 hover:border-white/10'
+                            }`}
+                          >
+                            <span>{sn}</span>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                setTempSelectedSns((prev) =>
+                                  prev.includes(sn)
+                                    ? prev.filter((s) => s !== sn)
+                                    : [...prev, sn]
+                                );
+                              }}
+                              className="w-4 h-4 rounded border-white/10 bg-slate-800 text-indigo-500 focus:ring-indigo-500/50 cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-white/10 bg-slate-950/30 flex items-center justify-between gap-3 flex-shrink-0">
+              <span className="text-xs text-slate-400 font-medium pl-2">
+                {tempSelectedSns.length} SN Terpilih
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowSnSelector(false);
+                    setSnSelectorProduct(null);
+                    setTempSelectedSns([]);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all text-xs font-semibold cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  disabled={tempSelectedSns.length === 0}
+                  onClick={() => {
+                    addMultipleSnsToCart(snSelectorProduct, tempSelectedSns);
+                    setShowSnSelector(false);
+                    setSnSelectorProduct(null);
+                    setTempSelectedSns([]);
+                  }}
+                  className="px-4 py-2 rounded-xl text-white font-bold text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  style={{
+                    background: tempSelectedSns.length > 0 
+                      ? 'linear-gradient(135deg, var(--primary-hex, #6366f1), var(--secondary-hex, #a78bfa))'
+                      : '#334155'
+                  }}
+                >
+                  Tambahkan ({tempSelectedSns.length})
+                </button>
+              </div>
             </div>
           </div>
         </div>

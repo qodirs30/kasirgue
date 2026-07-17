@@ -27,6 +27,7 @@ export interface Product {
   category: string;
   notes: string;
   createdAt: Date;
+  serialNumbers?: string[];
 }
 
 export interface TransactionItem {
@@ -35,6 +36,7 @@ export interface TransactionItem {
   quantity: number;
   price: number;
   buyPrice: number;
+  serialNumbers?: string[];
 }
 
 export interface Transaction {
@@ -55,6 +57,7 @@ export interface Transaction {
 
 export interface CartItem extends Product {
   quantity: number;
+  selectedSerialNumbers?: string[];
 }
 
 export interface PendingCart {

@@ -14,6 +14,7 @@ interface ProductFormData {
   photo: string;
   category: string;
   notes: string;
+  serialNumbers: string[];
 }
 
 const emptyForm: ProductFormData = {
@@ -25,6 +26,7 @@ const emptyForm: ProductFormData = {
   photo: '',
   category: '',
   notes: '',
+  serialNumbers: [],
 };
 
 export default function ProductsPage() {
@@ -86,6 +88,7 @@ export default function ProductsPage() {
       photo: product.photo,
       category: product.category,
       notes: product.notes,
+      serialNumbers: product.serialNumbers || [],
     });
     setShowNewCategoryInput(false);
     setNewCategory('');
@@ -117,6 +120,7 @@ export default function ProductsPage() {
         photo: formData.photo,
         category: categoryToUse,
         notes: formData.notes.trim(),
+        serialNumbers: formData.serialNumbers || [],
       };
 
       if (editingProduct?.id) {
@@ -415,6 +419,11 @@ export default function ProductsPage() {
                   {product.sku && (
                     <p className="text-slate-500 text-xs mt-0.5 font-mono">SKU: {product.sku}</p>
                   )}
+                  {product.serialNumbers && product.serialNumbers.length > 0 && (
+                    <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-medium rounded">
+                      🔑 {product.serialNumbers.length} SN aktif
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -625,6 +634,32 @@ export default function ProductsPage() {
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Serial Numbers */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                  Serial Numbers (Opsional)
+                </label>
+                <textarea
+                  value={formData.serialNumbers?.join('\n') || ''}
+                  onChange={(e) => {
+                    const lines = e.target.value.split('\n').map(line => line.trim()).filter(Boolean);
+                    setFormData((prev) => {
+                      const nextForm = { ...prev, serialNumbers: lines };
+                      if (lines.length > 0) {
+                        nextForm.stock = lines.length;
+                      }
+                      return nextForm;
+                    });
+                  }}
+                  placeholder="Masukkan Serial Number (satu per baris)..."
+                  rows={3}
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))]/50 transition-all resize-none text-sm font-mono"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Stok barang akan otomatis mengikuti jumlah Serial Number yang dimasukkan.
+                </p>
               </div>
 
               {/* Catatan */}
