@@ -65,16 +65,19 @@ export default function CashierPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [cartHeight, setCartHeight] = useState(50); // in vh on mobile (default 50)
   const [isDragging, setIsDragging] = useState(false);
-  const [dragHandleNode, setDragHandleNode] = useState<HTMLDivElement | null>(null);
+  const cartPanelRef = useRef<HTMLDivElement | null>(null);
+  const dragHandleRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
   const dragStartY = useRef(0);
   const lastTouchY = useRef(0);
   const dragStartHeight = useRef(0);
   const cartHeightRef = useRef(cartHeight);
+  const currentHeightRef = useRef(cartHeight);
 
   // Keep cartHeightRef in sync with cartHeight state
   useEffect(() => {
     cartHeightRef.current = cartHeight;
+    currentHeightRef.current = cartHeight;
   }, [cartHeight]);
 
   useEffect(() => {
@@ -90,9 +93,10 @@ export default function CashierPage() {
     setCartHeight((prev) => (prev >= 75 ? 18 : 92));
   };
 
-  // Programmatic touch events to bypass passive listener limits and call preventDefault()
+  // Touch listener attached directly to DOM node for iOS Safari non-passive support & zero-lag drag
   useEffect(() => {
-    if (!dragHandleNode || !isMobile) return;
+    const handleNode = dragHandleRef.current;
+    if (!handleNode || !isMobile) return;
 
     const onTouchStart = (e: TouchEvent) => {
       isDraggingRef.current = true;
@@ -102,8 +106,7 @@ export default function CashierPage() {
       lastTouchY.current = y;
       dragStartHeight.current = cartHeightRef.current;
 
-      // Synchronously remove transition styles on panels to prevent drag rendering lag
-      const parent = dragHandleNode.parentElement;
+      const parent = cartPanelRef.current;
       if (parent) {
         parent.style.transition = 'none';
         const leftPanel = parent.previousElementSibling as HTMLElement;
@@ -115,7 +118,6 @@ export default function CashierPage() {
 
     const onTouchMove = (e: TouchEvent) => {
       if (!isDraggingRef.current) return;
-      // Prevent browser native pull-to-refresh, page scrolling, and bouncing
       if (e.cancelable) {
         e.preventDefault();
       }
@@ -125,52 +127,53 @@ export default function CashierPage() {
       const deltaVh = (deltaY / window.innerHeight) * 100;
       let newHeight = dragStartHeight.current + deltaVh;
       if (newHeight < 18) newHeight = 18;
-      if (newHeight > 95) newHeight = 95; // Allow dragging up to 95vh (mentok atas)
-      setCartHeight(newHeight);
+      if (newHeight > 95) newHeight = 95;
+
+      currentHeightRef.current = newHeight;
+      // Direct DOM update for 60fps buttery-smooth dragging without React state lag
+      if (cartPanelRef.current) {
+        cartPanelRef.current.style.height = `${newHeight}vh`;
+      }
     };
 
-    const onTouchEnd = () => {
+    const onTouchEnd = (e: TouchEvent) => {
       if (!isDraggingRef.current) return;
       isDraggingRef.current = false;
       setIsDragging(false);
 
-      // Re-enable transitions for smooth snap snapping back to presets
-      const parent = dragHandleNode.parentElement;
+      const parent = cartPanelRef.current;
       if (parent) {
-        parent.style.transition = 'height 250ms cubic-bezier(0.16, 1, 0.3, 1)';
+        parent.style.transition = 'height 300ms cubic-bezier(0.16, 1, 0.3, 1)';
         const leftPanel = parent.previousElementSibling as HTMLElement;
         if (leftPanel) {
-          leftPanel.style.transition = 'height 250ms cubic-bezier(0.16, 1, 0.3, 1)';
+          leftPanel.style.transition = 'height 300ms cubic-bezier(0.16, 1, 0.3, 1)';
         }
       }
 
       const totalMoved = Math.abs(dragStartY.current - lastTouchY.current);
-      if (totalMoved < 8) {
-        // Simple tap -> auto-slide to top (92vh) or collapse
+      if (totalMoved < 10) {
+        if (e.cancelable) e.preventDefault();
         toggleCartExpand();
       } else {
-        // Drag gesture ended -> snap to nearest preset
-        setCartHeight((h) => {
-          const presets = [18, 50, 92]; // Snapping presets (collapsed, half, expanded to 92vh)
-          const nearest = presets.reduce((prev, curr) =>
-            Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
-          );
-          return nearest;
-        });
+        const finalH = currentHeightRef.current;
+        const presets = [18, 50, 92];
+        const nearest = presets.reduce((prev, curr) =>
+          Math.abs(curr - finalH) < Math.abs(prev - finalH) ? curr : prev
+        );
+        setCartHeight(nearest);
       }
     };
 
-    // iOS Safari fixes: touchstart MUST not be passive to enable e.preventDefault() in touchmove
-    dragHandleNode.addEventListener('touchstart', onTouchStart, { passive: false });
-    dragHandleNode.addEventListener('touchmove', onTouchMove, { passive: false });
-    dragHandleNode.addEventListener('touchend', onTouchEnd, { passive: false });
+    handleNode.addEventListener('touchstart', onTouchStart, { passive: false });
+    handleNode.addEventListener('touchmove', onTouchMove, { passive: false });
+    handleNode.addEventListener('touchend', onTouchEnd, { passive: false });
 
     return () => {
-      dragHandleNode.removeEventListener('touchstart', onTouchStart);
-      dragHandleNode.removeEventListener('touchmove', onTouchMove);
-      dragHandleNode.removeEventListener('touchend', onTouchEnd);
+      handleNode.removeEventListener('touchstart', onTouchStart);
+      handleNode.removeEventListener('touchmove', onTouchMove);
+      handleNode.removeEventListener('touchend', onTouchEnd);
     };
-  }, [dragHandleNode, isMobile]);
+  }, [isMobile]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!isMobile) return;
@@ -180,15 +183,11 @@ export default function CashierPage() {
     lastTouchY.current = e.clientY;
     dragStartHeight.current = cartHeight;
 
-    // Disable transitions during drag
-    if (dragHandleNode) {
-      const parent = dragHandleNode.parentElement;
-      if (parent) {
-        parent.style.transition = 'none';
-        const leftPanel = parent.previousElementSibling as HTMLElement;
-        if (leftPanel) {
-          leftPanel.style.transition = 'none';
-        }
+    if (cartPanelRef.current) {
+      cartPanelRef.current.style.transition = 'none';
+      const leftPanel = cartPanelRef.current.previousElementSibling as HTMLElement;
+      if (leftPanel) {
+        leftPanel.style.transition = 'none';
       }
     }
   };
@@ -202,36 +201,35 @@ export default function CashierPage() {
       let newHeight = dragStartHeight.current + deltaVh;
       if (newHeight < 18) newHeight = 18;
       if (newHeight > 95) newHeight = 95;
-      setCartHeight(newHeight);
+
+      currentHeightRef.current = newHeight;
+      if (cartPanelRef.current) {
+        cartPanelRef.current.style.height = `${newHeight}vh`;
+      }
     };
 
     const handleMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
 
-        // Re-enable transitions
-        if (dragHandleNode) {
-          const parent = dragHandleNode.parentElement;
-          if (parent) {
-            parent.style.transition = 'height 250ms cubic-bezier(0.16, 1, 0.3, 1)';
-            const leftPanel = parent.previousElementSibling as HTMLElement;
-            if (leftPanel) {
-              leftPanel.style.transition = 'height 250ms cubic-bezier(0.16, 1, 0.3, 1)';
-            }
+        if (cartPanelRef.current) {
+          cartPanelRef.current.style.transition = 'height 300ms cubic-bezier(0.16, 1, 0.3, 1)';
+          const leftPanel = cartPanelRef.current.previousElementSibling as HTMLElement;
+          if (leftPanel) {
+            leftPanel.style.transition = 'height 300ms cubic-bezier(0.16, 1, 0.3, 1)';
           }
         }
 
         const totalMoved = Math.abs(dragStartY.current - lastTouchY.current);
-        if (totalMoved < 8) {
+        if (totalMoved < 10) {
           toggleCartExpand();
         } else {
-          setCartHeight((h) => {
-            const presets = [18, 50, 92];
-            const nearest = presets.reduce((prev, curr) =>
-              Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
-            );
-            return nearest;
-          });
+          const finalH = currentHeightRef.current;
+          const presets = [18, 50, 92];
+          const nearest = presets.reduce((prev, curr) =>
+            Math.abs(curr - finalH) < Math.abs(prev - finalH) ? curr : prev
+          );
+          setCartHeight(nearest);
         }
       }
     };
@@ -244,7 +242,7 @@ export default function CashierPage() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isMobile, cartHeight, dragHandleNode]);
+  }, [isDragging, isMobile, cartHeight]);
 
   // ── Calculated Values ──────────────────────────────────────────────────────
   const subtotal = useMemo(
@@ -1007,36 +1005,32 @@ export default function CashierPage() {
           RIGHT PANEL — Shopping Cart
           ══════════════════════════════════════════════════════════════════════ */}
       <div 
+        ref={cartPanelRef}
         className="flex-[2] flex flex-col min-w-0 bg-slate-900 border-t lg:border-t-0 lg:border-l border-white/10 lg:h-full relative"
         style={{ 
           height: isMobile ? `${cartHeight}vh` : undefined,
-          transition: isDragging ? 'none' : 'height 200ms ease-out'
+          transition: isDragging ? 'none' : 'height 300ms cubic-bezier(0.16, 1, 0.3, 1)',
+          touchAction: isMobile ? 'none' : 'auto'
         }}
       >
         {/* Mobile Drag Handle */}
         {isMobile && (
           <div 
-            ref={setDragHandleNode}
-            onClick={() => {
-              const totalMoved = Math.abs(dragStartY.current - lastTouchY.current);
-              if (totalMoved < 8) {
-                toggleCartExpand();
-              }
-            }}
+            ref={dragHandleRef}
             className="w-full py-3.5 flex flex-col items-center justify-center cursor-ns-resize hover:bg-white/5 active:bg-white/10 transition-colors select-none z-20 group"
-            style={{ touchAction: 'none' }}
+            style={{ touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
             onMouseDown={handleMouseDown}
-            title={cartHeight >= 80 ? "Klik untuk turunkan" : "Klik untuk naikkan ke atas"}
+            title={cartHeight >= 75 ? "Klik untuk turunkan" : "Klik untuk naikkan ke atas"}
           >
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 group-hover:text-white transition-colors mb-1">
-              <span>{cartHeight >= 80 ? 'Tutup Detail Keranjang' : 'Geser / Klik Naik Ke Atas'}</span>
-              {cartHeight >= 80 ? (
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 group-hover:text-white transition-colors mb-1 pointer-events-none">
+              <span>{cartHeight >= 75 ? 'Tutup Detail Keranjang' : 'Geser / Klik Naik Ke Atas'}</span>
+              {cartHeight >= 75 ? (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
               ) : (
-                <ChevronUp className="w-3.5 h-3.5 text-indigo-400 animate-bounce" />
+                <ChevronUp className="w-4 h-4 text-indigo-400 animate-bounce" />
               )}
             </div>
-            <div className="w-14 h-1.5 bg-white/30 rounded-full group-hover:bg-white/60 transition-colors shadow-sm" />
+            <div className="w-14 h-1.5 bg-white/30 rounded-full group-hover:bg-white/60 transition-colors shadow-sm pointer-events-none" />
           </div>
         )}
         {/* ── Cart Header ─────────────────────────────────────────────────── */}
