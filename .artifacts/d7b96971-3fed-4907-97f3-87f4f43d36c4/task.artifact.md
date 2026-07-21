@@ -1,0 +1,5 @@
+- [x] Identify build errors (Java missing, environment conflict, missing local.properties)
+- [x] Create `android/local.properties` with correct `sdk.dir`
+- [x] Solve environment conflict (unsetting `ANDROID_PREFS_ROOT`)
+- [x] Run successful Gradle build using Android Studio's bundled JDK
+- [x] Verify APK generation at `android/app/build/outputs/apk/debug/app-debug.apk`

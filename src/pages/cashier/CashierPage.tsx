@@ -18,6 +18,8 @@ import {
   Package,
   ArrowLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import {
   db,
@@ -66,6 +68,7 @@ export default function CashierPage() {
   const [dragHandleNode, setDragHandleNode] = useState<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
   const dragStartY = useRef(0);
+  const lastTouchY = useRef(0);
   const dragStartHeight = useRef(0);
   const cartHeightRef = useRef(cartHeight);
 
@@ -83,6 +86,10 @@ export default function CashierPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  const toggleCartExpand = () => {
+    setCartHeight((prev) => (prev >= 75 ? 18 : 92));
+  };
+
   // Programmatic touch events to bypass passive listener limits and call preventDefault()
   useEffect(() => {
     if (!dragHandleNode || !isMobile) return;
@@ -90,7 +97,9 @@ export default function CashierPage() {
     const onTouchStart = (e: TouchEvent) => {
       isDraggingRef.current = true;
       setIsDragging(true);
-      dragStartY.current = e.touches[0].clientY;
+      const y = e.touches[0].clientY;
+      dragStartY.current = y;
+      lastTouchY.current = y;
       dragStartHeight.current = cartHeightRef.current;
 
       // Synchronously remove transition styles on panels to prevent drag rendering lag
@@ -111,6 +120,7 @@ export default function CashierPage() {
         e.preventDefault();
       }
       const currentY = e.touches[0].clientY;
+      lastTouchY.current = currentY;
       const deltaY = dragStartY.current - currentY;
       const deltaVh = (deltaY / window.innerHeight) * 100;
       let newHeight = dragStartHeight.current + deltaVh;
@@ -127,20 +137,27 @@ export default function CashierPage() {
       // Re-enable transitions for smooth snap snapping back to presets
       const parent = dragHandleNode.parentElement;
       if (parent) {
-        parent.style.transition = 'height 200ms ease-out';
+        parent.style.transition = 'height 250ms cubic-bezier(0.16, 1, 0.3, 1)';
         const leftPanel = parent.previousElementSibling as HTMLElement;
         if (leftPanel) {
-          leftPanel.style.transition = 'height 200ms ease-out';
+          leftPanel.style.transition = 'height 250ms cubic-bezier(0.16, 1, 0.3, 1)';
         }
       }
 
-      setCartHeight((h) => {
-        const presets = [18, 50, 92]; // Snapping presets (collapsed, half, expanded to 92vh)
-        const nearest = presets.reduce((prev, curr) =>
-          Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
-        );
-        return nearest;
-      });
+      const totalMoved = Math.abs(dragStartY.current - lastTouchY.current);
+      if (totalMoved < 8) {
+        // Simple tap -> auto-slide to top (92vh) or collapse
+        toggleCartExpand();
+      } else {
+        // Drag gesture ended -> snap to nearest preset
+        setCartHeight((h) => {
+          const presets = [18, 50, 92]; // Snapping presets (collapsed, half, expanded to 92vh)
+          const nearest = presets.reduce((prev, curr) =>
+            Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
+          );
+          return nearest;
+        });
+      }
     };
 
     // iOS Safari fixes: touchstart MUST not be passive to enable e.preventDefault() in touchmove
@@ -160,6 +177,7 @@ export default function CashierPage() {
     if (e.button !== 0) return;
     setIsDragging(true);
     dragStartY.current = e.clientY;
+    lastTouchY.current = e.clientY;
     dragStartHeight.current = cartHeight;
 
     // Disable transitions during drag
@@ -178,6 +196,7 @@ export default function CashierPage() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging || !isMobile) return;
+      lastTouchY.current = e.clientY;
       const deltaY = dragStartY.current - e.clientY;
       const deltaVh = (deltaY / window.innerHeight) * 100;
       let newHeight = dragStartHeight.current + deltaVh;
@@ -194,21 +213,26 @@ export default function CashierPage() {
         if (dragHandleNode) {
           const parent = dragHandleNode.parentElement;
           if (parent) {
-            parent.style.transition = 'height 200ms ease-out';
+            parent.style.transition = 'height 250ms cubic-bezier(0.16, 1, 0.3, 1)';
             const leftPanel = parent.previousElementSibling as HTMLElement;
             if (leftPanel) {
-              leftPanel.style.transition = 'height 200ms ease-out';
+              leftPanel.style.transition = 'height 250ms cubic-bezier(0.16, 1, 0.3, 1)';
             }
           }
         }
 
-        setCartHeight((h) => {
-          const presets = [18, 50, 92];
-          const nearest = presets.reduce((prev, curr) =>
-            Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
-          );
-          return nearest;
-        });
+        const totalMoved = Math.abs(dragStartY.current - lastTouchY.current);
+        if (totalMoved < 8) {
+          toggleCartExpand();
+        } else {
+          setCartHeight((h) => {
+            const presets = [18, 50, 92];
+            const nearest = presets.reduce((prev, curr) =>
+              Math.abs(curr - h) < Math.abs(prev - h) ? curr : prev
+            );
+            return nearest;
+          });
+        }
       }
     };
 
@@ -993,11 +1017,26 @@ export default function CashierPage() {
         {isMobile && (
           <div 
             ref={setDragHandleNode}
-            className="w-full py-4 flex items-center justify-center cursor-ns-resize hover:bg-white/5 active:bg-white/10 transition-colors select-none z-20"
+            onClick={() => {
+              const totalMoved = Math.abs(dragStartY.current - lastTouchY.current);
+              if (totalMoved < 8) {
+                toggleCartExpand();
+              }
+            }}
+            className="w-full py-3.5 flex flex-col items-center justify-center cursor-ns-resize hover:bg-white/5 active:bg-white/10 transition-colors select-none z-20 group"
             style={{ touchAction: 'none' }}
             onMouseDown={handleMouseDown}
+            title={cartHeight >= 80 ? "Klik untuk turunkan" : "Klik untuk naikkan ke atas"}
           >
-            <div className="w-14 h-1.5 bg-white/20 rounded-full hover:bg-white/40 transition-colors" />
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 group-hover:text-white transition-colors mb-1">
+              <span>{cartHeight >= 80 ? 'Tutup Detail Keranjang' : 'Geser / Klik Naik Ke Atas'}</span>
+              {cartHeight >= 80 ? (
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              ) : (
+                <ChevronUp className="w-3.5 h-3.5 text-indigo-400 animate-bounce" />
+              )}
+            </div>
+            <div className="w-14 h-1.5 bg-white/30 rounded-full group-hover:bg-white/60 transition-colors shadow-sm" />
           </div>
         )}
         {/* ── Cart Header ─────────────────────────────────────────────────── */}
@@ -1186,9 +1225,14 @@ export default function CashierPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex justify-between items-center mb-2.5 px-1 select-none">
-                <span className="text-xs text-slate-400">
+              <div 
+                onClick={toggleCartExpand}
+                className="flex justify-between items-center mb-2.5 px-1 select-none cursor-pointer hover:opacity-80 transition-opacity"
+                title="Klik untuk lihat detail keranjang"
+              >
+                <span className="text-xs text-slate-400 flex items-center gap-1">
                   Total ({cart.reduce((sum, i) => sum + i.quantity, 0)} item)
+                  <ChevronUp className="w-3.5 h-3.5 text-indigo-400 animate-bounce" />
                 </span>
                 <span
                   className="text-base font-bold"
