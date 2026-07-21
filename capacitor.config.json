@@ -1,0 +1,8 @@
+{
+  "appId": "com.kasirgue.app",
+  "appName": "Kasir Gue",
+  "webDir": "docs",
+  "server": {
+    "androidScheme": "https"
+  }
+}
