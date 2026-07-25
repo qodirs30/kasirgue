@@ -2205,21 +2205,40 @@ export default function CashierPage() {
       {/* ── Print Styles (injected) ───────────────────────────────────────── */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden !important;
+          @page {
+            margin: 0;
+            size: auto;
           }
-          .print\\:block,
-          .print\\:block * {
-            visibility: visible !important;
+          html, body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
-          .print\\:block {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 80mm;
-          }
-          .print\\:hidden {
+          #root {
             display: none !important;
+          }
+          body > *:not(.print-receipt) {
+            display: none !important;
+          }
+          .print-receipt {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 2mm !important;
+            box-sizing: border-box !important;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+          }
+          .print-receipt * {
+            background-color: transparent !important;
+            color: #000000 !important;
+            text-shadow: none !important;
           }
         }
 
