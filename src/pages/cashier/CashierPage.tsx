@@ -695,9 +695,27 @@ export default function CashierPage() {
       if (showLogo && storeProfile?.logo) {
         try {
           const logoSize = paperSize === '58mm' ? 12 : 16;
-          const logoX = (width - logoSize) / 2;
-          doc.addImage(storeProfile.logo, 'PNG', logoX, y, logoSize, logoSize);
-          y += logoSize + 4;
+          
+          // Determine the image's original aspect ratio to prevent stretching
+          const img = new Image();
+          img.src = storeProfile.logo;
+          let imgWidth = logoSize;
+          let imgHeight = logoSize;
+          
+          if (img.naturalWidth && img.naturalHeight) {
+            const ratio = img.naturalWidth / img.naturalHeight;
+            if (ratio > 1) {
+              // Wide image: maintain width, shrink height
+              imgHeight = logoSize / ratio;
+            } else {
+              // Tall or square image: maintain height, shrink width
+              imgWidth = logoSize * ratio;
+            }
+          }
+          
+          const logoX = (width - imgWidth) / 2;
+          doc.addImage(storeProfile.logo, 'PNG', logoX, y, imgWidth, imgHeight);
+          y += imgHeight + 4;
         } catch (e) {
           console.error("Failed to add logo to PDF: ", e);
         }
