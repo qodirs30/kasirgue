@@ -697,20 +697,23 @@ export default function CashierPage() {
           const logoSize = paperSize === '58mm' ? 12 : 16;
           
           // Determine the image's original aspect ratio to prevent stretching
-          const img = new Image();
-          img.src = storeProfile.logo;
           let imgWidth = logoSize;
           let imgHeight = logoSize;
           
-          if (img.naturalWidth && img.naturalHeight) {
-            const ratio = img.naturalWidth / img.naturalHeight;
-            if (ratio > 1) {
-              // Wide image: maintain width, shrink height
-              imgHeight = logoSize / ratio;
-            } else {
-              // Tall or square image: maintain height, shrink width
-              imgWidth = logoSize * ratio;
+          try {
+            const props = doc.getImageProperties(storeProfile.logo);
+            if (props && props.width && props.height) {
+              const ratio = props.width / props.height;
+              if (ratio > 1) {
+                // Wide image: maintain width, shrink height
+                imgHeight = logoSize / ratio;
+              } else {
+                // Tall or square image: maintain height, shrink width
+                imgWidth = logoSize * ratio;
+              }
             }
+          } catch (err) {
+            console.error("Failed to read image properties via jsPDF:", err);
           }
           
           const logoX = (width - imgWidth) / 2;
