@@ -1727,7 +1727,7 @@ export default function CashierPage() {
       {/* ── Print-Only Receipt (rendered via React Portal directly under body for perfect clean printing) ──────────────── */}
       {showReceipt && currentTransaction && createPortal(
         <div 
-          className="print-receipt hidden print:block bg-white text-black font-sans mx-auto"
+          className="print-receipt bg-white text-black font-sans mx-auto"
           style={{
             width: '100%',
             maxWidth: storeProfile?.receiptPaperSize === '58mm' 
@@ -2225,6 +2225,11 @@ export default function CashierPage() {
 
       {/* ── Print Styles (injected) ───────────────────────────────────────── */}
       <style>{`
+        /* Hide print receipt by default on screen */
+        .print-receipt {
+          display: none !important;
+        }
+
         @media print {
           @page {
             margin: 0;
@@ -2246,7 +2251,7 @@ export default function CashierPage() {
           body > *:not(.print-receipt) {
             display: none !important;
           }
-          .print-receipt {
+          body > .print-receipt {
             display: block !important;
             width: 100% !important;
             max-width: 100% !important;
@@ -2256,7 +2261,7 @@ export default function CashierPage() {
             background-color: #ffffff !important;
             color: #000000 !important;
           }
-          .print-receipt * {
+          body > .print-receipt * {
             background-color: transparent !important;
             color: #000000 !important;
             text-shadow: none !important;
