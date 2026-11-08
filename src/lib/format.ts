@@ -1,9 +1,11 @@
-export const formatRupiah = (n: number): string =>
-  new Intl.NumberFormat('id-ID', {
+export const formatRupiah = (n: number): string => {
+  const formatted = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     minimumFractionDigits: 0,
   }).format(n);
+  return formatted.replace(/\s/g, ''); // Remove spaces for thermal printer compatibility
+};
 
 export const formatDate = (date: Date): string =>
   new Intl.DateTimeFormat('id-ID', {
