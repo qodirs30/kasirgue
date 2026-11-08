@@ -1740,18 +1740,18 @@ export default function CashierPage() {
               : storeProfile?.receiptFontSize === 'large' 
                 ? '15px' 
                 : '12px',
-            lineHeight: '1.4',
+            lineHeight: '1.2',
             padding: '1mm'
           }}
         >
           {/* Store Header */}
           {(storeProfile?.receiptShowLogo !== false) && (
-            <div className="text-center mb-3">
+            <div className="text-center mb-1">
               {storeProfile?.logo && (
                 <img
                   src={storeProfile.logo}
                   alt=""
-                  className="w-12 h-12 mx-auto mb-1 object-contain"
+                  className="w-10 h-10 mx-auto mb-1 object-contain"
                 />
               )}
               <p className="font-bold text-[1.25em] leading-tight">
@@ -1771,7 +1771,7 @@ export default function CashierPage() {
           )}
 
           {(storeProfile?.receiptShowLogo === false) && (
-            <div className="text-center mb-3">
+            <div className="text-center mb-1">
               <p className="font-bold text-[1.25em] leading-tight">
                 {storeProfile?.storeName || 'Kasir Gue'}
               </p>
@@ -1788,60 +1788,59 @@ export default function CashierPage() {
             </div>
           )}
 
-          <p className="border-t border-dashed border-black my-2" />
+          <p className="border-t border-dashed border-black my-1" />
 
-          <p className="text-[0.9em] text-center">
+          <p className="text-[0.85em] text-center">
             {formatDateTime(new Date(currentTransaction.timestamp))}
           </p>
 
           {/* Customer Name */}
           {currentTransaction.customerName && (
-            <p className="text-[0.9em] text-center font-bold">
+            <p className="text-[0.85em] text-center font-bold">
               Pelanggan: {currentTransaction.customerName}
             </p>
           )}
 
-          <p className="border-t border-dashed border-black my-2" />
+          <p className="border-t border-dashed border-black my-1" />
 
           {/* Items */}
           {currentTransaction.items.map((item, idx) => (
-            <div key={idx} className="flex justify-between mb-1">
-              <div>
-                <span className="font-semibold">{item.name}</span>
-                {item.serialNumbers && item.serialNumbers.length > 0 && (
-                  <span className="block text-[0.8em] text-slate-800 font-mono italic">
-                    SN: {item.serialNumbers.join(', ')}
-                  </span>
-                )}
-                <br />
-                <span className="text-[0.85em] text-slate-700">
-                  {item.quantity} × {formatRupiah(item.price)}
+            <div key={idx} className="mb-1">
+              <div className="flex justify-between">
+                <span className="font-semibold text-[0.95em]">{item.name}</span>
+                <span className="font-semibold text-[0.95em]">
+                  {formatRupiah(item.price * item.quantity)}
                 </span>
               </div>
-              <span className="font-semibold">
-                {formatRupiah(item.price * item.quantity)}
-              </span>
+              {item.serialNumbers && item.serialNumbers.length > 0 && (
+                <span className="block text-[0.8em] text-slate-800 font-mono italic">
+                  SN: {item.serialNumbers.join(', ')}
+                </span>
+              )}
+              <div className="text-[0.85em] text-slate-700">
+                {item.quantity} × {formatRupiah(item.price)}
+              </div>
             </div>
           ))}
 
-          <p className="border-t border-dashed border-black my-2" />
+          <p className="border-t border-dashed border-black my-1" />
 
           <div className="space-y-0.5">
-            <div className="flex justify-between">
+            <div className="flex justify-between text-[0.95em]">
               <span>Subtotal</span>
               <span>{formatRupiah(currentTransaction.subtotal)}</span>
             </div>
             {currentTransaction.discount > 0 && (
-              <div className="flex justify-between">
+              <div className="flex justify-between text-[0.95em]">
                 <span>Diskon</span>
                 <span>-{formatRupiah(currentTransaction.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-[1.15em] border-t border-dashed border-black pt-1 mt-1">
+            <div className="flex justify-between font-bold text-[1.1em] border-t border-dashed border-black pt-1 mt-1">
               <span>Total</span>
               <span>{formatRupiah(currentTransaction.total)}</span>
             </div>
-            <div className="flex justify-between text-[0.95em]">
+            <div className="flex justify-between text-[0.9em]">
               <span>Metode</span>
               <span>
                 {currentTransaction.paymentMethod === 'cash'
@@ -1850,7 +1849,7 @@ export default function CashierPage() {
               </span>
             </div>
             {currentTransaction.paymentMethod === 'cash' && (
-              <div className="text-[0.95em] space-y-0.5">
+              <div className="text-[0.9em] space-y-0.5">
                 <div className="flex justify-between">
                   <span>Diterima</span>
                   <span>
@@ -1867,9 +1866,9 @@ export default function CashierPage() {
             )}
           </div>
 
-          <p className="border-t border-dashed border-black my-2" />
+          <p className="border-t border-dashed border-black my-1" />
 
-          <p className="text-center text-[0.9em] italic">
+          <p className="text-center text-[0.85em] italic">
             {storeProfile?.receiptFooterNote || 'Terima kasih atas kunjungan Anda!'}
           </p>
         </div>,
