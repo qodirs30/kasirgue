@@ -1731,17 +1731,17 @@ export default function CashierPage() {
           style={{
             width: '100%',
             maxWidth: storeProfile?.receiptPaperSize === '58mm' 
-              ? '48mm' 
+              ? '52mm' 
               : storeProfile?.receiptPaperSize === '80mm' 
-                ? '76mm' 
-                : '76mm',
+                ? '78mm' 
+                : '78mm',
             fontSize: storeProfile?.receiptFontSize === 'small' 
               ? '10px' 
               : storeProfile?.receiptFontSize === 'large' 
                 ? '15px' 
                 : '12px',
             lineHeight: '1.4',
-            padding: '2mm'
+            padding: '1mm'
           }}
         >
           {/* Store Header */}
@@ -2256,7 +2256,7 @@ export default function CashierPage() {
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 !important;
-            padding: 2mm !important;
+            padding: 1mm !important;
             box-sizing: border-box !important;
             background-color: #ffffff !important;
             color: #000000 !important;
