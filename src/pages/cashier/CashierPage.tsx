@@ -2252,14 +2252,15 @@ export default function CashierPage() {
           }
           body > .print-receipt {
             display: block !important;
-            width: 58mm !important;
-            max-width: 58mm !important;
+            width: 48mm !important;
+            max-width: 48mm !important;
             margin: 0 !important;
-            padding: 1mm !important;
+            padding: 0 !important;
             box-sizing: border-box !important;
             background-color: #ffffff !important;
             color: #000000 !important;
-            font-size: 10px !important;
+            font-size: 8px !important;
+            word-break: break-all !important;
           }
           body > .print-receipt * {
             background-color: transparent !important;

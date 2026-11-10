@@ -606,15 +606,12 @@ export default function StoreProfilePage() {
             maxWidth: formData.receiptPaperSize === '58mm' 
               ? '52mm' 
               : formData.receiptPaperSize === '80mm' 
-                ? '78mm' 
-                : '78mm',
-            fontSize: formData.receiptFontSize === 'small' 
-              ? '9px' 
-              : formData.receiptFontSize === 'large' 
-                ? '13px' 
-                : '11px',
-            lineHeight: '1.4',
-            padding: '1mm'
+                ? '76mm' 
+                : '76mm',
+            fontSize: '8px',
+            lineHeight: '1.1',
+            padding: '0.5mm',
+            wordBreak: 'break-all'
           }}
         >
           {/* Store Header */}
