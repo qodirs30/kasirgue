@@ -1729,19 +1729,12 @@ export default function CashierPage() {
         <div 
           className="print-receipt bg-white text-black font-sans mx-auto"
           style={{
-            width: '100%',
-            maxWidth: storeProfile?.receiptPaperSize === '58mm' 
-              ? '52mm' 
-              : storeProfile?.receiptPaperSize === '80mm' 
-                ? '78mm' 
-                : '78mm',
-            fontSize: storeProfile?.receiptFontSize === 'small' 
-              ? '10px' 
-              : storeProfile?.receiptFontSize === 'large' 
-                ? '15px' 
-                : '12px',
-            lineHeight: '1.2',
-            padding: '1mm'
+            width: '48mm',
+            maxWidth: '48mm',
+            fontSize: '8px',
+            lineHeight: '1.1',
+            padding: '0mm',
+            wordBreak: 'break-all'
           }}
         >
           {/* Store Header */}
